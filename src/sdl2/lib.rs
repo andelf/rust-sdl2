@@ -4,7 +4,7 @@
 #![desc = "SDL2 bindings"]
 #![license = "MIT"]
 
-#![feature(globs)]
+#![feature(globs, macro_rules)]
 
 extern crate collections;
 

@@ -1,7 +1,9 @@
-use std::libc::{uint32_t, uint64_t, c_void, c_int};
+use std::libc::{c_void, uint32_t};
 use std::cast;
-use std::ptr;
+use std::rc::Rc;
+use std::mem;
 
+#[allow(non_camel_case_types)]
 pub mod ll {
 
     use std::libc::{uint32_t, uint64_t, c_void, c_int};
@@ -41,48 +43,56 @@ pub fn delay(ms: uint) {
     unsafe { ll::SDL_Delay(ms as u32) }
 }
 
-struct CallbackParam<'a> {
-    cb: 'a |uint, *c_void| -> uint,
-    payload: *c_void
+struct CallbackParam<'a, T> {
+    cb: 'a |uint, T| -> uint,
+    param: T,
 }
 
-// pub struct Timer<'a> {
-//     raw: ll::SDL_TimerID,
-//     cb: |uint, *c_void|:'a -> uint,
-//     payload: *c_void
-// }
-
-// impl<'a> Timer<'a> {
-//     pub fn new<'a>(delay: u32, callback: 'a |uint, *c_void| -> uint, param: *c_void) -> Timer {
-//         let param = CallbackParam { cb: callback, payload: param };
-
-//         unsafe {
-//             let timer_id = ll::SDL_AddTimer(delay as u32, Some(callback_function), cast::transmute(&param));
-//             Timer { raw: timer_id, param: ~param }
-//         }
-//     }
-// }
-
-
-
-extern "C" fn callback_function(interval: u32, param: *c_void) -> u32 {
-    println!("!!cb!!");
-    let param : &CallbackParam = unsafe { cast::transmute(param) };
-    let ref cb = param.cb;
-    let ref payload = param.payload;
-
-    //println!("addr => {:?}", &param);
-    println!("callback() got cb: {:?}", cb);
-    (*cb)(0, ptr::null());
-    (*cb)(interval as uint, *payload) as u32
+pub struct Timer<'a, T> {
+    delay: uint,
+    raw: ll::SDL_TimerID,
+    closure: Rc<CallbackParam<'a, T>>
 }
 
-pub fn add_timer(delay: uint, callback: |uint, *c_void| -> uint, param: *c_void) -> int {
-    let ~param = ~CallbackParam { cb: callback, payload: param };
-    println!("add_timer() got cb: {:?}", param.cb);
-    (param.cb)(0, ptr::null());
-    println!("addr => {}", &param as *CallbackParam);
-    unsafe {
-        ll::SDL_AddTimer(delay as u32, Some(callback_function), cast::transmute(&param)) as int
+impl<'a, T> Timer<'a, T> {
+    pub fn new<'a>(delay: uint, callback: 'a |uint, T| -> uint, cbparam: T) -> Timer<'a, T> {
+        let cb_func = match mem::size_of::<T>() {
+            1  => callback_function_1,
+            2  => callback_function_2,
+            4  => callback_function_4,
+            6  => callback_function_6,
+            8  => callback_function_8,
+            16 => callback_function_16,
+            32 => callback_function_32,
+            _ => unimplemented!()
+        };
+        // use Rc box to store closure and param
+        let c_param = Rc::new(CallbackParam { cb: callback, param: cbparam });
+        let timer_id = unsafe { ll::SDL_AddTimer(delay as u32, Some(cb_func), cast::transmute(c_param.deref())) };
+        Timer { delay: delay, raw: timer_id, closure: c_param }
     }
+
+    pub fn remove(&self) {
+        unsafe { ll::SDL_RemoveTimer(self.raw) };
+    }
+
 }
+
+macro_rules! gen_callback_func_with_param_size(
+    ($name:ident, $size:expr) => (
+        extern "C" fn $name(interval: uint32_t, param: *c_void) -> uint32_t {
+            let param_wrapper : &CallbackParam<[u8, ..$size]> = unsafe { cast::transmute(param) };
+            let ref func = param_wrapper.cb;
+            let ref fparam = param_wrapper.param;
+            (*func)(interval as uint, *fparam) as uint32_t
+        }
+    )
+)
+
+gen_callback_func_with_param_size!(callback_function_1, 1)
+gen_callback_func_with_param_size!(callback_function_2, 2)
+gen_callback_func_with_param_size!(callback_function_4, 4)
+gen_callback_func_with_param_size!(callback_function_6, 6)
+gen_callback_func_with_param_size!(callback_function_8, 8)
+gen_callback_func_with_param_size!(callback_function_16, 16)
+gen_callback_func_with_param_size!(callback_function_32, 32)
