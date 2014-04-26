@@ -111,7 +111,11 @@ impl Color {
     }
     #[inline]
     pub fn from_u32(val: u32) -> Color {
-        unsafe { cast::transmute(val) }
+        Color { r: (val >> 24) as u8,
+                g: (val >> 16) as u8,
+                b: (val >> 8)  as u8,
+                a: val         as u8
+        }
     }
     #[inline]
     pub fn to_u32(&self) -> u32 {
@@ -169,7 +173,7 @@ impl ToColor for RGBA {
 
 impl ToColor for u32 {
     fn to_color(&self) -> Color {
-        unsafe { cast::transmute(*self) }
+        Color::from_u32(*self)
     }
 }
 
