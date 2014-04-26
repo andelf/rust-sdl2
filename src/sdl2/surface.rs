@@ -2,8 +2,10 @@ use std::cast;
 use rect::Rect;
 use get_error;
 use std::ptr;
+use std::bool;
 use libc::c_int;
 use pixels;
+use pixels::ToColor;
 use rwops;
 
 #[allow(non_camel_case_types)]
@@ -200,9 +202,9 @@ impl Surface {
     }
 
     pub fn set_color_key(&self, enable: bool, color: pixels::Color) -> Result<(), ~str> {
-        let key = color.to_u32(&self.get_pixel_format());
+        let key = self.get_pixel_format().map_color(color);
         let result = unsafe {
-            ll::SDL_SetColorKey(self.raw, ::std::bool::to_bit(enable), key)
+            ll::SDL_SetColorKey(self.raw, bool::to_bit(enable), key)
         };
         if result == 0 {
             Ok(())
@@ -218,24 +220,21 @@ impl Surface {
         };
 
         if result == 0 {
-            Ok(pixels::Color::from_u32(&self.get_pixel_format(), key))
+            Ok(self.get_pixel_format().get_color(key))
         } else {
             Err(get_error())
         }
     }
 
-    pub fn set_color_mod(&self, color: pixels::Color) -> bool {
-        let (r, g, b) = match color {
-            pixels::RGB(r, g, b) => (r, g, b),
-            pixels::RGBA(r, g, b, _) => (r, g, b)
-        };
+    pub fn set_color_mod(&self, color: pixels::RGB) -> bool {
+        let (r, g, b, _) = color.to_color().to_tuple();
 
         unsafe {
             ll::SDL_SetSurfaceColorMod(self.raw, r, g, b) == 0
         }
     }
 
-    pub fn get_color_mod(&self) -> Result<pixels::Color, ~str> {
+    pub fn get_color_mod(&self) -> Result<pixels::RGB, ~str> {
         let r: u8 = 0;
         let g: u8 = 0;
         let b: u8 = 0;
@@ -250,8 +249,8 @@ impl Surface {
             Err(get_error())
         }
     }
-    /*
-    pub fn SDL_SetSurfaceAlphaMod(surface: *SDL_Surface, alpha: uint8_t) -> c_int;
+
+    /*pub fn SDL_SetSurfaceAlphaMod(surface: *SDL_Surface, alpha: uint8_t) -> c_int;
     pub fn SDL_GetSurfaceAlphaMod(surface: *SDL_Surface, alpha: *uint8_t ) -> c_int;
     pub fn SDL_SetSurfaceBlendMode(surface: *SDL_Surface, blendMode: SDL_BlendMode) -> c_int;
     pub fn SDL_GetSurfaceBlendMode(surface: *SDL_Surface, blendMode: *SDL_BlendMode) -> c_int;
