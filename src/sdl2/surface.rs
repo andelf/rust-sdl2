@@ -8,6 +8,8 @@ use pixels;
 use pixels::ToColor;
 use rwops;
 
+mod flag;
+
 #[allow(non_camel_case_types)]
 pub mod ll {
     use pixels::ll::SDL_PixelFormat;
@@ -77,13 +79,12 @@ pub mod ll {
     }
 }
 
-#[deriving(Eq)]
-pub enum SurfaceFlag {
-    SWSurface = ll::SDL_SWSURFACE as int,
-    PreAlloc = ll::SDL_PREALLOC as int,
-    RLEAccel = ll::SDL_RLEACCEL as int,
-    DontFree = ll::SDL_DONTFREE as int
-}
+flag_type!(SurfaceFlag {
+    SWSurface = ll::SDL_SWSURFACE,
+    PreAlloc = ll::SDL_PREALLOC,
+    RLEAccel = ll::SDL_RLEACCEL,
+    DontFree = ll::SDL_DONTFREE
+})
 
 #[deriving(Eq)] #[allow(raw_pointer_deriving)]
 pub struct Surface {
@@ -102,12 +103,10 @@ impl Drop for Surface {
 }
 
 impl Surface {
-    pub fn new(surface_flags: &[SurfaceFlag], width: int, height: int, bpp: int,
+    pub fn new(surface_flags: SurfaceFlag, width: int, height: int, bpp: int,
                rmask: u32, gmask: u32, bmask: u32, amask: u32) -> Result<~Surface, ~str> {
-        let flags = surface_flags.iter().fold(0u32, |flags, flag| { flags | *flag as u32 });
-
         unsafe {
-            let raw = ll::SDL_CreateRGBSurface(flags, width as c_int, height as c_int, bpp as c_int,
+            let raw = ll::SDL_CreateRGBSurface(surface_flags.get(), width as c_int, height as c_int, bpp as c_int,
                                                rmask, gmask, bmask, amask);
 
             if raw == ptr::null() {
