@@ -134,6 +134,10 @@ impl rand::Rand for Color {
 
 pub trait ToColor {
     fn to_color(&self) -> Color;
+
+    fn to_u32(&self) -> u32 {
+        self.to_color().to_u32()
+    }
 }
 
 impl ToColor for Color {
