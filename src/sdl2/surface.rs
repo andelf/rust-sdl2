@@ -1,15 +1,10 @@
 use std::cast;
-use std::ptr;
-use std::mem;
-use std::bool;
-use libc::c_int;
-use pixels;
-use pixels::{Color, ToColor};
 use rect::Rect;
 use get_error;
+use std::ptr;
+use libc::c_int;
+use pixels;
 use rwops;
-use render;
-use render::BlendMode;
 
 #[allow(non_camel_case_types)]
 pub mod ll {
@@ -202,9 +197,9 @@ impl Surface {
     }
 
     pub fn set_color_key(&self, enable: bool, color: pixels::Color) -> Result<(), ~str> {
-        let key = self.get_pixel_format().map_color(color);
+        let key = color.to_u32(&self.get_pixel_format());
         let result = unsafe {
-            ll::SDL_SetColorKey(self.raw, bool::to_bit(enable), key)
+            ll::SDL_SetColorKey(self.raw, ::std::bool::to_bit(enable), key)
         };
         if result == 0 {
             Ok(())
@@ -220,23 +215,24 @@ impl Surface {
         };
 
         if result == 0 {
-            Ok(self.get_pixel_format().get_color(key))
+            Ok(pixels::Color::from_u32(&self.get_pixel_format(), key))
         } else {
             Err(get_error())
         }
     }
 
-    pub fn set_color_mod(&self, color: pixels::RGB) -> Result<(), ~str> {
-        let (r, g, b, _) = color.to_color().to_tuple();
-
-        let result = unsafe {
-            ll::SDL_SetSurfaceColorMod(self.raw, r, g, b) == 0
+    pub fn set_color_mod(&self, color: pixels::Color) -> bool {
+        let (r, g, b) = match color {
+            pixels::RGB(r, g, b) => (r, g, b),
+            pixels::RGBA(r, g, b, _) => (r, g, b)
         };
-        if result { Ok(()) }
-        else { Err(get_error()) }
+
+        unsafe {
+            ll::SDL_SetSurfaceColorMod(self.raw, r, g, b) == 0
+        }
     }
 
-    pub fn get_color_mod(&self) -> Result<pixels::RGB, ~str> {
+    pub fn get_color_mod(&self) -> Result<pixels::Color, ~str> {
         let r: u8 = 0;
         let g: u8 = 0;
         let b: u8 = 0;
@@ -251,136 +247,21 @@ impl Surface {
             Err(get_error())
         }
     }
-
-    pub fn set_alpha_mod(&self, alpha: u8) -> Result<(), ~str> {
-        let result = unsafe { ll::SDL_SetSurfaceAlphaMod(self.raw, alpha) == 0 };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn get_alpha_mod(&self) -> Result<u8, ~str> {
-        let alpha = 0u8;
-
-        let result = unsafe { ll::SDL_GetSurfaceAlphaMod(self.raw, &alpha) == 0 };
-        if result { Ok(alpha) }
-        else { Err(get_error()) }
-    }
-
-    pub fn set_blend_mode(&self, blend: BlendMode) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_SetSurfaceBlendMode(self.raw, FromPrimitive::from_i64(blend as i64).unwrap()) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn get_blend_mode(&self) -> Result<BlendMode, ~str> {
-        let blend : render::ll::SDL_BlendMode = unsafe { mem::init() };
-
-        let result = unsafe {
-            ll::SDL_GetSurfaceBlendMode(self.raw, &blend) == 0
-        };
-        if result {
-            Ok(FromPrimitive::from_i64(blend as i64).unwrap())
-        } else {
-            Err(get_error())
-        }
-    }
-
-    pub fn set_clip_rect(&self, rect: Rect) -> bool {
-        unsafe { ll::SDL_SetClipRect(self.raw, &rect) != 0 }
-    }
-
-    pub fn get_clip_rect(&self) -> Rect {
-        let rect = Rect::new(0, 0, 0, 0);
-
-        unsafe { ll::SDL_GetClipRect(self.raw, &rect) };
-        rect
-    }
-
-    pub fn convert(&self, fmt: pixels::PixelFormat) -> Result<~Surface, ~str> {
-        let flags = 0u32;       // the flags are unused and should be set to 0
-        let raw = unsafe {
-            ll::SDL_ConvertSurface(self.raw, fmt.raw, flags)
-        };
-        if raw.is_null() {
-            Err(get_error())
-        } else {
-            Ok(~Surface {raw: raw, owned: true})
-        }
-    }
-
-    pub fn convert_format(&self, fmtflag: pixels::PixelFormatFlag) -> Result<~Surface, ~str> {
-        let flags = 0u32;
-        let raw = unsafe {
-            ll::SDL_ConvertSurfaceFormat(self.raw, fmtflag as u32, flags)
-        };
-        if raw.is_null() {
-            Err(get_error())
-        } else {
-            Ok(~Surface {raw: raw, owned: true})
-        }
-    }
-
-    pub fn fill_rect(&self, rect: Option<Rect>, color: Color) -> Result<(), ~str> {
-        let c = self.get_pixel_format().map_color(color);
-        let result = unsafe {
-            ll::SDL_FillRect(self.raw, cast::transmute(&rect), c) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn fill_rects(&self, rects: &[Rect], color: Color) -> Result<(), ~str> {
-        let c = self.get_pixel_format().map_color(color);
-        let result = unsafe {
-            ll::SDL_FillRects(self.raw, cast::transmute(rects.get(0)), rects.len() as c_int, c) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn upper_blit(&self, srcrect: Option<Rect>, dst: &Surface, dstrect: Option<Rect>) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_UpperBlit(self.raw, cast::transmute(&srcrect),dst.raw, cast::transmute(&dstrect)) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn lower_blit(&self, srcrect: Option<Rect>, dst: &Surface, dstrect: Option<Rect>) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_LowerBlit(self.raw, cast::transmute(&srcrect),dst.raw, cast::transmute(&dstrect)) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn soft_stretch(&self, srcrect: Option<Rect>, dst: &Surface, dstrect: Option<Rect>) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_SoftStretch(self.raw, cast::transmute(&srcrect),dst.raw, cast::transmute(&dstrect)) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn upper_blit_scaled(&self, srcrect: Option<Rect>, dst: &Surface, dstrect: Option<Rect>) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_UpperBlitScaled(self.raw, cast::transmute(&srcrect),dst.raw, cast::transmute(&dstrect)) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    pub fn lower_blit_scaled(&self, srcrect: Option<Rect>, dst: &Surface, dstrect: Option<Rect>) -> Result<(), ~str> {
-        let result = unsafe {
-            ll::SDL_LowerBlitScaled(self.raw, cast::transmute(&srcrect),dst.raw, cast::transmute(&dstrect)) == 0
-        };
-        if result { Ok(()) }
-        else { Err(get_error()) }
-    }
-
-    // TODO:
-    // pub fn SDL_ConvertPixels(width: c_int, height: c_int, src_format: uint32_t, src: *c_void, src_pitch: c_int,
-    //                          dst_format: uint32_t, dst: *c_void, dst_pitch: c_int) -> c_int;
+    /*
+    pub fn SDL_SetSurfaceAlphaMod(surface: *SDL_Surface, alpha: uint8_t) -> c_int;
+    pub fn SDL_GetSurfaceAlphaMod(surface: *SDL_Surface, alpha: *uint8_t ) -> c_int;
+    pub fn SDL_SetSurfaceBlendMode(surface: *SDL_Surface, blendMode: SDL_BlendMode) -> c_int;
+    pub fn SDL_GetSurfaceBlendMode(surface: *SDL_Surface, blendMode: *SDL_BlendMode) -> c_int;
+    pub fn SDL_SetClipRect(surface: *SDL_Surface, rect: *SDL_Rect) ->  SDL_bool;
+    pub fn SDL_GetClipRect(surface: *SDL_Surface, rect: *SDL_Rect);
+    pub fn SDL_ConvertSurface(src: *SDL_Surface, fmt: *SDL_PixelFormat, flags: uint32_t) ->  *SDL_Surface;
+    pub fn SDL_ConvertSurfaceFormat(src: *SDL_Surface, pixel_format: uint32_t, flags: uint32_t) ->  *SDL_Surface;
+    pub fn SDL_ConvertPixels(width: c_int, height: c_int, src_format: uint32_t, src: *c_void, src_pitch: c_int, dst_format: uint32_t, dst: *c_void, dst_pitch: c_int) -> c_int;
+    pub fn SDL_FillRect(dst: *SDL_Surface, rect: *SDL_Rect, color: uint32_t) -> c_int;
+    pub fn SDL_FillRects(dst: *SDL_Surface, rects: *SDL_Rect, count: c_int, color: uint32_t) -> c_int;
+    pub fn SDL_UpperBlit(src: *SDL_Surface, srcrect: *SDL_Rect, dst: *SDL_Surface, dstrect: *SDL_Rect) -> c_int;
+    pub fn SDL_LowerBlit(src: *SDL_Surface, srcrect: *SDL_Rect, dst: *SDL_Surface, dstrect: *SDL_Rect) -> c_int;
+    pub fn SDL_SoftStretch(src: *SDL_Surface, srcrect: *SDL_Rect, dst: *SDL_Surface, dstrect: *SDL_Rect) -> c_int;
+    pub fn SDL_UpperBlitScaled(src: *SDL_Surface, srcrect: *SDL_Rect, dst: *SDL_Surface, dstrect: *SDL_Rect) -> c_int;
+    pub fn SDL_LowerBlitScaled(src: *SDL_Surface, srcrect: *SDL_Rect, dst: *SDL_Surface, dstrect: *SDL_Rect) -> c_int)*/
 }

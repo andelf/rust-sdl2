@@ -1,55 +1,45 @@
-/*!
-Pixel Formats and Conversion Routines
- */
-
 extern crate rand;
-
-use std::cast;
-
-/// A structure that represents a color.
-#[deriving(Eq, Clone)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
 
 #[allow(non_camel_case_types)]
 pub mod ll {
     use libc::{c_int, uint8_t, uint32_t};
 
     //SDL_pixels.h
-    pub type SDL_Color = super::Color;
+    pub struct SDL_Color {
+        pub r: uint8_t,
+        pub g: uint8_t,
+        pub b: uint8_t,
+        pub a: uint8_t,
+    }
 
     pub struct SDL_Palette {
         pub ncolors: c_int,
         pub colors: *SDL_Color,
-        version: uint32_t,
-        refcount: c_int
+        pub version: uint32_t,
+        pub refcount: c_int
     }
 
     #[allow(uppercase_variables)]
     pub struct SDL_PixelFormat {
         pub format: SDL_PixelFormatFlag,
-        pub palette: Option<*SDL_Palette>,
+        pub palette: *SDL_Palette,
         pub BitsPerPixel: uint8_t,
         pub BytesPerPixel: uint8_t,
-        padding: [uint8_t, ..2],
+        pub padding: [uint8_t, ..2],
         pub Rmask: uint8_t,
         pub Gmask: uint8_t,
         pub Bmask: uint8_t,
         pub Amask: uint8_t,
-        Rloss: uint8_t,
-        Gloss: uint8_t,
-        Bloss: uint8_t,
-        Aloss: uint8_t,
-        Rshift: uint8_t,
-        Gshift: uint8_t,
-        Bshift: uint8_t,
-        Ashift: uint8_t,
-        refcount: c_int,
-        next: *SDL_PixelFormat
+        pub Rloss: uint8_t,
+        pub Gloss: uint8_t,
+        pub Bloss: uint8_t,
+        pub Aloss: uint8_t,
+        pub Rshift: uint8_t,
+        pub Gshift: uint8_t,
+        pub Bshift: uint8_t,
+        pub Ashift: uint8_t,
+        pub refcount: c_int,
+        pub next: *SDL_PixelFormat
     }
 
     pub type SDL_PixelFormatFlag = uint32_t;
@@ -97,155 +87,52 @@ pub mod ll {
         pub fn SDL_MapRGBA(format: *SDL_PixelFormat, r: uint8_t, g: uint8_t, b: uint8_t, a: uint8_t) -> uint32_t;
     }
 }
-
-/// A structure that contains palette information.
 #[deriving(Eq)] #[allow(raw_pointer_deriving)]
 pub struct Palette {
     pub raw: *ll::SDL_Palette
 }
 
+#[deriving(Eq)]
+pub enum Color {
+    RGB(u8, u8, u8),
+    RGBA(u8, u8, u8, u8)
+}
+
 impl Color {
-    #[inline]
-    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Color {
-        Color {r: r, g: g, b: b, a: a}
-    }
-    #[inline]
-    pub fn from_u32(val: u32) -> Color {
-        Color { r: (val >> 24) as u8,
-                g: (val >> 16) as u8,
-                b: (val >> 8)  as u8,
-                a: val         as u8
+    pub fn to_u32(&self, format: &PixelFormat) -> u32 {
+        match self {
+            &RGB(r, g, b) => {
+                unsafe { ll::SDL_MapRGB(format.raw, r, g, b) }
+            }
+            &RGBA(r, g, b, a) => {
+                unsafe { ll::SDL_MapRGBA(format.raw, r, g, b, a) }
+            }
         }
     }
-    #[inline]
-    pub fn to_u32(&self) -> u32 {
-        self.r as u32 << 24 |
-        self.g as u32 << 16 |
-        self.b as u32 << 8  |
-        self.a as u32
-    }
-    #[inline]
-    pub fn to_tuple(&self) -> (u8, u8, u8, u8) {
-        (self.r, self.g, self.b, self.a)
+
+    pub fn from_u32(format: &PixelFormat, pixel: u32) -> Color {
+        let r: u8 = 0;
+        let g: u8 = 0;
+        let b: u8 = 0;
+        let a: u8 = 0;
+
+        unsafe {
+            ll::SDL_GetRGBA(pixel, format.raw, &r, &g, &b, &a)
+        };
+        RGBA(r, g, b, a)
     }
 }
 
 impl rand::Rand for Color {
     fn rand<R: rand::Rng>(rng: &mut R) -> Color {
-        Color::from_u32(rng.gen::<u32>())
+        if rng.gen() { RGBA(rng.gen(), rng.gen(), rng.gen(), rng.gen()) }
+        else { RGB(rng.gen(), rng.gen(), rng.gen()) }
     }
 }
-
-pub trait ToColor {
-    fn to_color(&self) -> Color;
-
-    fn to_u32(&self) -> u32 {
-        self.to_color().to_u32()
-    }
-}
-
-impl ToColor for Color {
-    fn to_color(&self) -> Color {
-        *self
-    }
-}
-
-pub struct RGB(pub u8, pub u8, pub u8);
-
-impl ToColor for RGB {
-    fn to_color(&self) -> Color {
-        match *self {
-            RGB(r, g, b) => Color::new(r, g, b, 255u8),
-        }
-    }
-}
-
-#[deprecated="replaced by new style color and ToColor trait!"]
-pub struct RGBA(pub u8, pub u8, pub u8, pub u8);
-
-impl ToColor for RGBA {
-    fn to_color(&self) -> Color {
-        match *self {
-            RGBA(r, g, b, a) => Color::new(r, g, b, a)
-        }
-    }
-}
-
-impl ToColor for u32 {
-    fn to_color(&self) -> Color {
-        Color::from_u32(*self)
-    }
-}
-
-impl ToColor for (u8, u8, u8, u8) {
-    fn to_color(&self) -> Color {
-        unsafe { cast::transmute(*self) }
-    }
-}
-
-
 
 #[deriving(Eq)] #[allow(raw_pointer_deriving)]
 pub struct PixelFormat {
     pub raw: *ll::SDL_PixelFormat
-}
-
-impl PixelFormat {
-    pub fn map_color(&self, color: Color) -> u32 {
-        let Color {r: r, g: g, b: b, a: a} = color;
-        unsafe { ll::SDL_MapRGBA(self.raw, r, g, b, a) }
-    }
-    pub fn map_rgb(&self, rgb: RGB) -> u32 {
-        match rgb {
-            RGB(r, g, b) => {
-                unsafe { ll::SDL_MapRGB(self.raw, r, g, b) }
-            }
-        }
-    }
-
-    pub fn map_rgba(&self, rgba: RGBA) -> u32 {
-        match rgba {
-            RGBA(r, g, b, a) => {
-                unsafe { ll::SDL_MapRGBA(self.raw, r, g, b, a) }
-            }
-        }
-    }
-
-    pub fn get_color(&self, pixel: u32) -> Color {
-        let r: u8 = 0;
-        let g: u8 = 0;
-        let b: u8 = 0;
-        let a: u8 = 0;
-
-        unsafe {
-            ll::SDL_GetRGBA(pixel, self.raw, &r, &g, &b, &a)
-        };
-        (r, g, b, a).to_color()
-    }
-
-    pub fn get_rgb(&self, pixel: u32) -> RGB {
-        let r: u8 = 0;
-        let g: u8 = 0;
-        let b: u8 = 0;
-
-        unsafe {
-            ll::SDL_GetRGB(pixel, self.raw, &r, &g, &b)
-        };
-        RGB(r, g, b)
-    }
-
-    #[allow(deprecated)]
-    pub fn get_rgba(&self, pixel: u32) -> RGBA {
-        let r: u8 = 0;
-        let g: u8 = 0;
-        let b: u8 = 0;
-        let a: u8 = 0;
-
-        unsafe {
-            ll::SDL_GetRGBA(pixel, self.raw, &r, &g, &b, &a)
-        };
-        RGBA(r, g, b, a)
-    }
 }
 
 #[deriving(Eq, Show, FromPrimitive)]
@@ -340,140 +227,5 @@ impl PixelFormatFlag {
             Unknown | Index1LSB | Index1MSB | Index4LSB | Index4MSB
                 => fail!("not supported format: {}", *self),
         }
-    }
-}
-
-pub trait RawPixel {
-    fn pixel_format() -> PixelFormatFlag;
-}
-
-pub struct PixelRGB24 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-impl RawPixel for PixelRGB24 {
-    fn pixel_format() -> PixelFormatFlag { RGB24 }
-}
-
-pub struct PixelBGR24 {
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-}
-
-impl RawPixel for PixelBGR24 {
-    fn pixel_format() -> PixelFormatFlag { BGR24 }
-}
-
-pub struct PixelRGB888 {
-    padding: u8,
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-impl RawPixel for PixelRGB888 {
-    fn pixel_format() -> PixelFormatFlag { RGB888 }
-}
-
-pub struct PixelRGBX8888 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    padding: u8,
-}
-
-impl RawPixel for PixelRGBX8888 {
-    fn pixel_format() -> PixelFormatFlag { RGBX8888 }
-}
-
-pub struct PixelBGR888 {
-    padding: u8,
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-}
-
-impl RawPixel for PixelBGR888 {
-    fn pixel_format() -> PixelFormatFlag { BGR888 }
-}
-
-pub struct PixelBGRX8888 {
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-    padding: u8,
-}
-
-impl RawPixel for PixelBGRX8888 {
-    fn pixel_format() -> PixelFormatFlag { BGRX8888 }
-}
-
-pub struct PixelARGB8888 {
-    pub a: u8,
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-impl RawPixel for PixelARGB8888 {
-    fn pixel_format() -> PixelFormatFlag { ARGB8888 }
-}
-
-pub struct PixelRGBA8888 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl RawPixel for PixelRGBA8888 {
-    fn pixel_format() -> PixelFormatFlag { RGBA4444 }
-}
-
-pub struct PixelABGR8888 {
-    pub a: u8,
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-}
-
-impl RawPixel for PixelABGR8888 {
-    fn pixel_format() -> PixelFormatFlag { ABGR8888 }
-}
-
-pub struct PixelBGRA8888 {
-    pub b: u8,
-    pub g: u8,
-    pub r: u8,
-    pub a: u8,
-}
-
-impl RawPixel for PixelBGRA8888 {
-    fn pixel_format() -> PixelFormatFlag { BGRA8888 }
-}
-
-pub struct PixelARGB2101010 {
-    raw: u32
-}
-
-impl PixelARGB2101010 {
-    #[inline]
-    pub fn get_a(&self) -> u8 {
-        ((self.raw >> 30) << 6) as u8
-    }
-    #[inline]
-    pub fn get_r(&self) -> u8 {
-        ((self.raw >> 22) & 0xff) as u8
-    }
-    #[inline]
-    pub fn get_g(&self) -> u8 {
-        ((self.raw >> 12) & 0xff) as u8
-    }
-    #[inline]
-    pub fn get_b(&self) -> u8 {
-        ((self.raw >> 2) & 0xff) as u8
     }
 }

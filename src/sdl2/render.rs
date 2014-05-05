@@ -1,7 +1,6 @@
 use video;
 use surface;
 use pixels;
-use pixels::ToColor;
 use get_error;
 use std::ptr;
 use libc;
@@ -273,8 +272,13 @@ impl Renderer {
     }
 
     pub fn set_draw_color(&self, color: pixels::Color) -> Result<(), ~str> {
-        let ret = unsafe {
-            ll::SDL_SetRenderDrawColor(self.raw, color.r, color.g, color.b, color.a)
+        let ret = match color {
+            pixels::RGB(r, g, b) => {
+                unsafe { ll::SDL_SetRenderDrawColor(self.raw, r, g, b, 255) }
+            },
+            pixels::RGBA(r, g, b, a) => {
+                unsafe { ll::SDL_SetRenderDrawColor(self.raw, r, g, b, a)  }
+            }
         };
         if ret == 0 { Ok(()) }
         else { Err(get_error()) }
@@ -287,7 +291,7 @@ impl Renderer {
         let a: u8 = 0;
         let result = unsafe { ll::SDL_GetRenderDrawColor(self.raw, &r, &g, &b, &a) == 0 };
         if result {
-            Ok((r, g, b, a).to_color())
+            Ok(pixels::RGBA(r, g, b, a))
         } else {
             Err(get_error())
         }
