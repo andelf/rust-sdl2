@@ -1,8 +1,6 @@
 use std::cast;
 use std::str;
 
-mod flag;
-
 // Setup linking for all targets.
 #[cfg(target_os="macos")]
 mod mac {

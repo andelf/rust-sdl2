@@ -500,6 +500,7 @@ pub enum EventType {
     LastEventType = ll::SDL_LASTEVENT,
 }
 
+#[deriving(Show)]
 /// An enum of window events.
 pub enum WindowEventId {
     NoneWindowEventId,
@@ -555,25 +556,25 @@ pub enum Event {
     AppDidEnterForegroundEvent(uint),
 
     /// (timestamp, window, winEventId, data1, data2)
-    WindowEvent(uint, ~video::Window, WindowEventId, int, int),
+    WindowEvent(uint, video::Window, WindowEventId, int, int),
     // TODO: SysWMEvent
 
     /// (timestamp, window, keycode, scancode, keymod)
-    KeyDownEvent(uint, ~video::Window, KeyCode, ScanCode, Mod),
-    KeyUpEvent(uint, ~video::Window, KeyCode, ScanCode, Mod),
+    KeyDownEvent(uint, video::Window, KeyCode, ScanCode, Mod),
+    KeyUpEvent(uint, video::Window, KeyCode, ScanCode, Mod),
     /// (timestamp, window, text, start, length)
-    TextEditingEvent(uint, ~video::Window, ~str, int, int),
+    TextEditingEvent(uint, video::Window, ~str, int, int),
     /// (timestamp, window, text)
-    TextInputEvent(uint, ~video::Window, ~str),
+    TextInputEvent(uint, video::Window, ~str),
 
     /// (timestamp, window, which, [MouseState], x, y, xrel, yrel)
-    MouseMotionEvent(uint, ~video::Window, uint, MouseState, int, int,
+    MouseMotionEvent(uint, video::Window, uint, MouseState, int, int,
                      int, int),
     /// (timestamp, window, which, MouseBtn, x, y)
-    MouseButtonDownEvent(uint, ~video::Window, uint, Mouse, int, int),
-    MouseButtonUpEvent(uint, ~video::Window, uint, Mouse, int, int),
+    MouseButtonDownEvent(uint, video::Window, uint, Mouse, int, int),
+    MouseButtonUpEvent(uint, video::Window, uint, Mouse, int, int),
     /// (timestamp, window, whichId, x, y)
-    MouseWheelEvent(uint, ~video::Window, uint, int, int),
+    MouseWheelEvent(uint, video::Window, uint, int, int),
 
     /// (timestamp, whichId, axisIdx, value)
     JoyAxisMotionEvent(uint, int, int, i16),
@@ -616,7 +617,53 @@ pub enum Event {
     DropFileEvent(uint, ~str),
 
     /// (timestamp, Window, type, code)
-    UserEvent(uint, ~video::Window, uint, int),
+    UserEvent(uint, video::Window, uint, int),
+}
+
+impl ::std::fmt::Show for Event {
+    fn fmt(&self, out: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        out.buf.write_str(match *self {
+            NoEvent => "NoEvent",
+            QuitEvent(..) => "QuitEvent",
+            AppTerminatingEvent(..) => "AppTerminatingEvent",
+            AppLowMemoryEvent(..) => "AppLowMemoryEvent",
+            AppWillEnterBackgroundEvent(..) => "AppWillEnterBackgroundEvent",
+            AppDidEnterBackgroundEvent(..) => "AppDidEnterBackgroundEvent",
+            AppWillEnterForegroundEvent(..) => "AppWillEnterForegroundEvent",
+            AppDidEnterForegroundEvent(..) => "AppDidEnterForegroundEvent",
+            WindowEvent(..) => "WindowEvent",
+            KeyDownEvent(..) => "KeyDownEvent",
+            KeyUpEvent(..) => "KeyUpEvent",
+            TextEditingEvent(..) => "TextEditingEvent",
+            TextInputEvent(..) => "TextInputEvent",
+            MouseMotionEvent(..) => "MouseMotionEvent",
+            MouseButtonDownEvent(..) => "MouseButtonDownEvent",
+            MouseButtonUpEvent(..) => "MouseButtonUpEvent",
+            MouseWheelEvent(..) => "MouseWheelEvent",
+            JoyAxisMotionEvent(..) => "JoyAxisMotionEvent",
+            JoyBallMotionEvent(..) => "JoyBallMotionEvent",
+            JoyHatMotionEvent(..) => "JoyHatMotionEvent",
+            JoyButtonDownEvent(..) => "JoyButtonDownEvent",
+            JoyButtonUpEvent(..) => "JoyButtonUpEvent",
+            JoyDeviceAddedEvent(..) => "JoyDeviceAddedEvent",
+            JoyDeviceRemovedEvent(..) => "JoyDeviceRemovedEvent",
+            ControllerAxisMotionEvent(..) => "ControllerAxisMotionEvent",
+            ControllerButtonDownEvent(..) => "ControllerButtonDownEvent",
+            ControllerButtonUpEvent(..) => "ControllerButtonUpEvent",
+            ControllerDeviceAddedEvent(..) => "ControllerDeviceAddedEvent",
+            ControllerDeviceRemovedEvent(..) => "ControllerDeviceRemovedEvent",
+            ControllerDeviceRemappedEvent(..) => "ControllerDeviceRemappedEvent",
+            FingerDownEvent(..) => "FingerDownEvent",
+            FingerUpEvent(..) => "FingerUpEvent",
+            FingerMotionEvent(..) => "FingerMotionEvent",
+            DollarGestureEvent(..) => "DollarGestureEvent",
+            DollarRecordEvent(..) => "DollarRecordEvent",
+            MultiGestureEvent(..) => "MultiGestureEvent",
+            ClipboardUpdateEvent(..) => "ClipboardUpdateEvent",
+            DropFileEvent(..) => "DropFileEvent",
+            UserEvent(..) => "UserEvent",
+        })
+    }
 }
 
 // TODO: Remove this when from_utf8 is updated in Rust
@@ -738,7 +785,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_owned(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<~[u8]>()).unwrap_or(~"");
+                let text = str::from_utf8_owned(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<~[u8]>()).unwrap_or("".to_owned());
                 TextEditingEvent(event.timestamp as uint, window, text,
                                  event.start as int, event.length as int)
             }
@@ -751,7 +798,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_owned(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<~[u8]>()).unwrap_or(~"");
+                let text = str::from_utf8_owned(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<~[u8]>()).unwrap_or("".to_owned());
                 TextInputEvent(event.timestamp as uint, window, text)
             }
 
@@ -1094,7 +1141,7 @@ pub fn push_event(event: Event) -> Result<(), ~str> {
             else { Err(get_error()) }
         },
         None => {
-            Err(~"Unsupport event type to push back to queue.")
+            Err("Unsupport event type to push back to queue.".to_owned())
         }
     }
 }

@@ -11,8 +11,6 @@ use rwops;
 use render;
 use render::BlendMode;
 
-mod flag;
-
 #[allow(non_camel_case_types)]
 pub mod ll {
     use pixels::ll::SDL_PixelFormat;
@@ -107,7 +105,7 @@ impl Drop for Surface {
 
 impl Surface {
     pub fn new(surface_flags: SurfaceFlag, width: int, height: int, bpp: int,
-               rmask: u32, gmask: u32, bmask: u32, amask: u32) -> Result<~Surface, ~str> {
+               rmask: u32, gmask: u32, bmask: u32, amask: u32) -> Result<Surface, ~str> {
         unsafe {
             let raw = ll::SDL_CreateRGBSurface(surface_flags.get(), width as c_int, height as c_int, bpp as c_int,
                                                rmask, gmask, bmask, amask);
@@ -115,7 +113,7 @@ impl Surface {
             if raw == ptr::null() {
                 Err(get_error())
             } else {
-                Ok(~Surface { raw: raw, owned: true })
+                Ok(Surface { raw: raw, owned: true })
             }
         }
     }
@@ -155,7 +153,7 @@ impl Surface {
     /// Locks a surface so that the pixels can be directly accessed safely.
     pub fn with_lock<R>(&self, f: |pixels: &mut [u8]| -> R) -> R {
         unsafe {
-            if ll::SDL_LockSurface(self.raw) != 0 { fail!(~"could not lock surface"); }
+            if ll::SDL_LockSurface(self.raw) != 0 { fail!("could not lock surface"); }
             let len = (*self.raw).pitch as uint * ((*self.raw).h as uint);
             let pixels: &mut [u8] = cast::transmute(((*self.raw).pixels, len));
             let rv = f(pixels);
@@ -168,13 +166,13 @@ impl Surface {
         unsafe { ll::SDL_UnlockSurface(self.raw); }
     }
 
-    pub fn from_bmp(path: &Path) -> Result<~Surface, ~str> {
+    pub fn from_bmp(path: &Path) -> Result<Surface, ~str> {
         let raw = unsafe {
             ll::SDL_LoadBMP_RW(try!(rwops::RWops::from_file(path, "rb")).raw, 0)
         };
 
         if raw.is_null() { Err(get_error()) }
-        else { Ok(~Surface{raw: raw, owned: true}) }
+        else { Ok(Surface{raw: raw, owned: true}) }
     }
 
     pub fn save_bmp(&self, path: &Path) -> Result<(), ~str> {
