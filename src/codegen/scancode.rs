@@ -43,12 +43,12 @@ fn ScanCode(code: uint, ident: &'static str) -> ScanCode {
 }
 
 impl ScanCode {
-    fn ident(&self) -> ~str {
-        self.ident.to_owned()
+    fn ident(&self) -> StrBuf {
+        StrBuf::from_str(self.ident)
     }
 
-    fn padded_ident(&self) -> ~str {
-        self.ident() + " ".repeat(unsafe { longest_ident } - self.ident().len())
+    fn padded_ident(&self) -> StrBuf {
+        format!("{}{}", self.ident(), " ".repeat(unsafe { longest_ident } - self.ident().len()))
     }
 
 }
@@ -319,7 +319,7 @@ use std::num::ToPrimitive;
 pub enum ScanCode {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).into_bytes()));
+        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).as_bytes()));
     }
 
     try!(out.write("
@@ -338,9 +338,9 @@ impl ScanCode {
         match *self {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).into_bytes()));
+        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).as_bytes()));
     }
-    
+
     try!(out.write("
         }
     }
@@ -355,7 +355,7 @@ impl ToPrimitive for ScanCode {
     for primitive_type in types.iter() {
         try!(out.write(format!("fn to_{}(&self) -> Option<{}> \\{
             Some(self.code() as {})
-        \\}\n", *primitive_type, *primitive_type, *primitive_type).into_bytes()));
+        \\}\n", *primitive_type, *primitive_type, *primitive_type).as_bytes()));
     }
 
 try!(out.write("
@@ -374,12 +374,12 @@ impl FromPrimitive for ScanCode {
         try!(out.write(format!("
     fn from_{}(n: {}) -> Option<ScanCode> \\{
         match n \\{
-", *primitive_type, *primitive_type).into_bytes()));
+", *primitive_type, *primitive_type).as_bytes()));
 
         for &entry in entries.iter() {
-            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).into_bytes()));
+            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).as_bytes()));
         }
-   
+
         try!(out.write("
                 _   => { Some(UnknownScanCode) }
             }
@@ -388,7 +388,7 @@ impl FromPrimitive for ScanCode {
 
 try!(out.write("
 }".as_bytes()));
-    
+
     try!(out.flush());
     Ok(())
 }

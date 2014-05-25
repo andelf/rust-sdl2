@@ -1,6 +1,6 @@
 use std::ptr;
 use std::mem;
-use std::c_str::CString;
+use std::str;
 use std::c_vec::CVec;
 use libc;
 use libc::{c_int, size_t, c_void};
@@ -8,6 +8,7 @@ use libc::{uint8_t, uint16_t, uint32_t};
 use std::raw::Slice;
 
 use get_error;
+use SdlResult;
 use rwops::RWops;
 
 
@@ -152,10 +153,10 @@ pub fn get_num_audio_drivers() -> int {
     unsafe { ll::SDL_GetNumAudioDrivers() as int }
 }
 
-pub fn get_audio_driver(index: int) -> ~str {
+pub fn get_audio_driver(index: int) -> StrBuf {
     unsafe {
         let buf = ll::SDL_GetAudioDriver(index as c_int);
-        CString::new(buf, false).as_str().unwrap().into_owned()
+        str::raw::from_c_str(buf)
     }
 }
 
@@ -163,14 +164,14 @@ pub fn get_num_audio_devices(iscapture: int) -> int {
     unsafe { ll::SDL_GetNumAudioDevices(iscapture as c_int) as int }
 }
 
-pub fn get_audio_device_name(index: int, iscapture: int) -> ~str {
+pub fn get_audio_device_name(index: int, iscapture: int) -> StrBuf {
     unsafe {
         let buf = ll::SDL_GetAudioDeviceName(index as c_int, iscapture as c_int);
-        CString::new(buf, false).as_str().unwrap().into_owned()
+        str::raw::from_c_str(buf)
     }
 }
 
-pub fn audio_init(name: &str) -> Result<(), ~str> {
+pub fn audio_init(name: &str) -> SdlResult<()> {
     let ret = name.with_c_str(|buf| {
             unsafe { ll::SDL_AudioInit(buf) }
         });
@@ -185,10 +186,10 @@ pub fn audio_quit() {
     unsafe { ll::SDL_AudioQuit() }
 }
 
-pub fn get_current_audio_driver() -> ~str {
+pub fn get_current_audio_driver() -> StrBuf {
     unsafe {
         let buf = ll::SDL_GetCurrentAudioDriver();
-        CString::new(buf, false).as_str().unwrap().into_owned()
+        str::raw::from_c_str(buf)
     }
 }
 
@@ -221,11 +222,11 @@ extern "C" fn c_audio_callback(userdata: *c_void, stream: *uint8_t, len: c_int) 
 
 
 impl<'a> AudioSpec<'a> {
-    pub fn load_wav(path: &Path) -> Result<(AudioSpec, CVec<u8>), ~str> {
+    pub fn load_wav(path: &Path) -> SdlResult<(AudioSpec, CVec<u8>)> {
         AudioSpec::load_wav_rw(&try!(RWops::from_file(path, "rb")))
     }
 
-    pub fn load_wav_rw(src: &RWops) -> Result<(AudioSpec, CVec<u8>), ~str> {
+    pub fn load_wav_rw(src: &RWops) -> SdlResult<(AudioSpec, CVec<u8>)> {
         assert_eq!(mem::size_of::<AudioSpec>(), mem::size_of::<ll::SDL_AudioSpec>());
         let mut spec = unsafe { mem::uninit::<AudioSpec>() };
         let audio_buf = ptr::null::<u8>();
@@ -261,7 +262,7 @@ impl AudioDevice {
         }
     }
 
-    pub fn open(device: Option<&str>, iscapture: int, spec: &AudioSpec) -> Result<(AudioDevice, AudioSpec), ~str> {
+    pub fn open(device: Option<&str>, iscapture: int, spec: &AudioSpec) -> SdlResult<(AudioDevice, AudioSpec)> {
         //! SDL_OpenAudioDevice
         let obtained = unsafe { mem::uninit::<AudioSpec>() };
         unsafe {
@@ -331,7 +332,7 @@ impl Drop for AudioCVT {
 
 impl AudioCVT {
     pub fn new(src_format: AudioFormat, src_channels: u8, src_rate: int,
-               dst_format: AudioFormat, dst_channels: u8, dst_rate: int) -> Result<AudioCVT, ~str> {
+               dst_format: AudioFormat, dst_channels: u8, dst_rate: int) -> SdlResult<AudioCVT> {
         unsafe {
             let c_cvt_p = libc::malloc(mem::size_of::<ll::SDL_AudioCVT>() as size_t) as *mut ll::SDL_AudioCVT;
             let ret = ll::SDL_BuildAudioCVT(c_cvt_p,
@@ -345,7 +346,7 @@ impl AudioCVT {
         }
     }
 
-    pub fn convert(&self, src: CVec<u8>) -> Result<CVec<u8>, ~str> {
+    pub fn convert(&self, src: CVec<u8>) -> SdlResult<CVec<u8>> {
         //! Convert audio data to a desired audio format.
 
         unsafe {

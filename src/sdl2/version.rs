@@ -3,7 +3,7 @@ Querying SDL Version
  */
 
 use std::fmt;
-use std::c_str::CString;
+use std::str;
 
 #[doc(hidden)]
 #[allow(non_camel_case_types)]
@@ -58,10 +58,10 @@ pub fn get_version() -> Version {
 }
 
 /// Get the code revision of SDL that is linked against your program.
-pub fn get_revision() -> ~str {
+pub fn get_revision() -> StrBuf {
     unsafe {
         let ret = ll::SDL_GetRevision();
-        CString::new(ret, false).as_str().unwrap().into_owned()
+        str::raw::from_c_str(ret)
     }
 }
 

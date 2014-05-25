@@ -44,14 +44,13 @@ fn Key(code: uint, ident: &'static str) -> Key {
 }
 
 impl Key {
-    fn ident(&self) -> ~str {
-        self.ident.to_owned()
+    fn ident(&self) -> StrBuf {
+        StrBuf::from_str(self.ident)
     }
 
-    fn padded_ident(&self) -> ~str {
-        self.ident() + " ".repeat(unsafe { longest_ident } - self.ident().len())
+    fn padded_ident(&self) -> StrBuf {
+        format!("{}{}", self.ident(), " ".repeat(unsafe { longest_ident } - self.ident().len()))
     }
-
 }
 
 static mut longest_ident: uint = 0;
@@ -313,17 +312,17 @@ use std::num::ToPrimitive;
 pub enum KeyCode {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).into_bytes()));
+        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).as_bytes()));
     }
 
     try!(out.write("
 }
 
 impl Hash for KeyCode {
-   #[inline] 
+   #[inline]
     fn hash(&self, state: &mut SipState) {
 	self.code().hash(state);
-    } 
+    }
 }
 
 impl KeyCode {
@@ -332,7 +331,7 @@ impl KeyCode {
         match *self {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).into_bytes()));
+        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).as_bytes()));
     }
     try!(out.write("
         }
@@ -346,7 +345,7 @@ impl ToPrimitive for KeyCode {
     for primitive_type in types.iter() {
         try!(out.write(format!("fn to_{}(&self) -> Option<{}> \\{
             Some(self.code() as {})
-        \\}\n", *primitive_type, *primitive_type, *primitive_type).into_bytes()));
+        \\}\n", *primitive_type, *primitive_type, *primitive_type).as_bytes()));
     }
 
 try!(out.write("
@@ -364,9 +363,9 @@ impl FromPrimitive for KeyCode {
         try!(out.write(format!("
     fn from_{}(n: {}) -> Option<KeyCode> \\{
         match n \\{
-", *primitive_type, *primitive_type).into_bytes()));
+", *primitive_type, *primitive_type).as_bytes()));
         for &entry in entries.iter() {
-            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).into_bytes()));
+            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).as_bytes()));
         }
         try!(out.write("
                 _   => { Some(UnknownKey) }
@@ -374,8 +373,8 @@ impl FromPrimitive for KeyCode {
         }\n".as_bytes()));
     }
 
-try!(out.write("
+    try!(out.write("
 }".as_bytes()));
-	try!(out.flush());
+    try!(out.flush());
     Ok(())
 }
