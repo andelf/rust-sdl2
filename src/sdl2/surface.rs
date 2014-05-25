@@ -1,6 +1,7 @@
 use std::mem;
 use rect::Rect;
 use get_error;
+use SdlResult;
 use std::ptr;
 use libc::c_int;
 use pixels;
@@ -82,7 +83,8 @@ bitflags!(flags SurfaceFlag: u32 {
     static DontFree = ll::SDL_DONTFREE as u32
 })
 
-#[deriving(Eq)] #[allow(raw_pointer_deriving)]
+#[deriving(Eq)]
+#[allow(raw_pointer_deriving)]
 pub struct Surface {
     pub raw: *ll::SDL_Surface,
     pub owned: bool
@@ -100,7 +102,7 @@ impl Drop for Surface {
 
 impl Surface {
     pub fn new(surface_flags: SurfaceFlag, width: int, height: int, bpp: int,
-               rmask: u32, gmask: u32, bmask: u32, amask: u32) -> Result<Surface, ~str> {
+               rmask: u32, gmask: u32, bmask: u32, amask: u32) -> SdlResult<Surface> {
         unsafe {
             let raw = ll::SDL_CreateRGBSurface(surface_flags.bits(), width as c_int, height as c_int, bpp as c_int,
                                                rmask, gmask, bmask, amask);
@@ -161,7 +163,7 @@ impl Surface {
         unsafe { ll::SDL_UnlockSurface(self.raw); }
     }
 
-    pub fn from_bmp(path: &Path) -> Result<Surface, ~str> {
+    pub fn from_bmp(path: &Path) -> SdlResult<Surface> {
         let raw = unsafe {
             ll::SDL_LoadBMP_RW(try!(rwops::RWops::from_file(path, "rb")).raw, 0)
         };
@@ -170,7 +172,7 @@ impl Surface {
         else { Ok(Surface{raw: raw, owned: true}) }
     }
 
-    pub fn save_bmp(&self, path: &Path) -> Result<(), ~str> {
+    pub fn save_bmp(&self, path: &Path) -> SdlResult<()> {
 	let ret = unsafe {
             ll::SDL_SaveBMP_RW(self.raw, try!(rwops::RWops::from_file(path, "rb")).raw, 0)
 	};
@@ -196,7 +198,7 @@ impl Surface {
         }
     }
 
-    pub fn set_color_key(&self, enable: bool, color: pixels::Color) -> Result<(), ~str> {
+    pub fn set_color_key(&self, enable: bool, color: pixels::Color) -> SdlResult<()> {
         let key = color.to_u32(&self.get_pixel_format());
         let result = unsafe {
             ll::SDL_SetColorKey(self.raw, ::std::bool::to_bit(enable), key)
@@ -208,7 +210,7 @@ impl Surface {
         }
     }
 
-    pub fn get_color_key(&self) -> Result<pixels::Color, ~str> {
+    pub fn get_color_key(&self) -> SdlResult<pixels::Color> {
         let key: u32 = 0;
         let result = unsafe {
             ll::SDL_GetColorKey(self.raw, &key)
@@ -232,7 +234,7 @@ impl Surface {
         }
     }
 
-    pub fn get_color_mod(&self) -> Result<pixels::Color, ~str> {
+    pub fn get_color_mod(&self) -> SdlResult<pixels::Color> {
         let r: u8 = 0;
         let g: u8 = 0;
         let b: u8 = 0;

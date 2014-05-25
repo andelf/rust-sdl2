@@ -84,6 +84,8 @@ pub enum Error {
     UnsupportedError = ll::SDL_UNSUPPORTED as int
 }
 
+pub type SdlResult<T> = Result<T, StrBuf>;
+
 pub fn init(flags: InitFlag) -> bool {
     unsafe {
         ll::SDL_Init(flags.bits()) == 0
@@ -111,7 +113,7 @@ pub fn was_inited(flags: InitFlag) -> InitFlag {
     }
 }
 
-pub fn get_error() -> ~str {
+pub fn get_error() -> StrBuf {
     unsafe {
         let cstr = ll::SDL_GetError();
 
