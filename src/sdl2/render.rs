@@ -159,7 +159,7 @@ bitflags!(flags RendererFlags: u32 {
 
 #[deriving(Eq)]
 pub struct RendererInfo {
-    pub name: StrBuf,
+    pub name: String,
     pub flags: RendererFlags,
     pub texture_formats: Vec<pixels::PixelFormatFlag>,
     pub max_texture_width: int,
@@ -203,9 +203,9 @@ impl RendererInfo {
 
 #[deriving(Eq)] #[allow(raw_pointer_deriving)]
 pub struct Renderer<S> {
-    pub raw: *ll::SDL_Renderer,
+    raw: *ll::SDL_Renderer,
     parent: Option<S>,
-    pub owned: bool
+    owned: bool
 }
 
 #[unsafe_destructor]
@@ -227,7 +227,7 @@ impl Renderer<Window> {
         };
 
         let raw = unsafe {
-            ll::SDL_CreateRenderer(window.raw, index as c_int, renderer_flags.bits())
+            ll::SDL_CreateRenderer(window.raw(), index as c_int, renderer_flags.bits())
         };
 
         if raw == ptr::null() {
@@ -242,10 +242,7 @@ impl Renderer<Window> {
         let raw_renderer: *ll::SDL_Renderer = ptr::null();
         let result = unsafe { ll::SDL_CreateWindowAndRenderer(width as c_int, height as c_int, window_flags.bits(), &raw_window, &raw_renderer) == 0};
         if result {
-            let window = Window {
-                raw: raw_window,
-                owned: true
-            };
+            let window = unsafe { Window::from_ll(raw_window, true) };
             Ok(Renderer {
                 raw: raw_renderer,
                 parent: Some(window),
@@ -259,7 +256,7 @@ impl Renderer<Window> {
 
 impl Renderer<Surface> {
     pub fn from_surface(surface: surface::Surface) -> SdlResult<Renderer<Surface>> {
-        let result = unsafe { ll::SDL_CreateSoftwareRenderer(surface.raw) };
+        let result = unsafe { ll::SDL_CreateSoftwareRenderer(surface.raw()) };
         if result == ptr::null() {
             Ok(Renderer {
                 raw: result,
@@ -281,6 +278,12 @@ impl<S> Renderer<S> {
         use std::mem;
         mem::replace(&mut self.parent, None).unwrap()
     }
+
+    #[inline]
+    pub fn raw(&self) -> *ll::SDL_Renderer { self.raw }
+
+    #[inline]
+    pub fn owned(&self) -> bool { self.owned }
 
     pub fn set_draw_color(&self, color: pixels::Color) -> SdlResult<()> {
         let ret = match color {
@@ -341,7 +344,7 @@ impl<S> Renderer<S> {
     }
 
     pub fn create_texture_from_surface(&self, surface: &surface::Surface) -> SdlResult<Texture> {
-        let result = unsafe { ll::SDL_CreateTextureFromSurface(self.raw, surface.raw) };
+        let result = unsafe { ll::SDL_CreateTextureFromSurface(self.raw, surface.raw()) };
         if result == ptr::null() {
             Err(get_error())
         } else {
@@ -730,7 +733,7 @@ impl Texture {
         if result {
             Ok((texw as f64, texh as f64))
         } else {
-            Err("Operation not supported".to_owned())
+            Err("Operation not supported".into_string())
         }
     }
 

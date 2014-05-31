@@ -564,9 +564,9 @@ pub enum Event {
     KeyDownEvent(uint, video::Window, KeyCode, ScanCode, Mod),
     KeyUpEvent(uint, video::Window, KeyCode, ScanCode, Mod),
     /// (timestamp, window, text, start, length)
-    TextEditingEvent(uint, video::Window, StrBuf, int, int),
+    TextEditingEvent(uint, video::Window, String, int, int),
     /// (timestamp, window, text)
-    TextInputEvent(uint, video::Window, StrBuf),
+    TextInputEvent(uint, video::Window, String),
 
     /// (timestamp, window, which, [MouseState], x, y, xrel, yrel)
     MouseMotionEvent(uint, video::Window, uint, MouseState, int, int,
@@ -615,7 +615,7 @@ pub enum Event {
     ClipboardUpdateEvent(uint),
 
     /// (timestamp, filename)
-    DropFileEvent(uint, StrBuf),
+    DropFileEvent(uint, String),
 
     /// (timestamp, Window, type, code)
     UserEvent(uint, video::Window, uint, int),
@@ -786,7 +786,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_owned();
+                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
                 TextEditingEvent(event.timestamp as uint, window, text,
                                  event.start as int, event.length as int)
             }
@@ -799,7 +799,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_owned();
+                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
                 TextInputEvent(event.timestamp as uint, window, text)
             }
 
@@ -1142,7 +1142,7 @@ pub fn push_event(event: Event) -> SdlResult<()> {
             else { Err(get_error()) }
         },
         None => {
-            Err("Unsupport event type to push back to queue.".to_owned())
+            Err("Unsupport event type to push back to queue.".into_string())
         }
     }
 }

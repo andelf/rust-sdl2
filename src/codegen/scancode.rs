@@ -1,4 +1,5 @@
 use std::io::{IoResult,Writer};
+use std::path::BytesContainer;
 use super::get_writer;
 
 struct ScanCode {
@@ -38,17 +39,18 @@ impl TotalOrd for ScanCode {
 impl TotalEq for ScanCode {
 }
 
+#[allow(non_snake_case_functions)]
 fn ScanCode(code: uint, ident: &'static str) -> ScanCode {
     ScanCode { code: code, ident: ident }
 }
 
 impl ScanCode {
-    fn ident(&self) -> StrBuf {
-        StrBuf::from_str(self.ident)
+    fn ident(&self) -> String {
+        self.ident.to_string()
     }
 
-    fn padded_ident(&self) -> StrBuf {
-        format!("{}{}", self.ident(), " ".repeat(unsafe { longest_ident } - self.ident().len()))
+    fn padded_ident(&self) -> String {
+        self.ident().append(" ".repeat(unsafe { longest_ident } - self.ident().len()).as_slice())
     }
 
 }
@@ -319,7 +321,7 @@ use std::num::ToPrimitive;
 pub enum ScanCode {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).as_bytes()));
+        try!(out.write(format!("    {} = {},\n", entry.padded_ident(), entry.code).container_as_bytes()));
     }
 
     try!(out.write("
@@ -338,7 +340,7 @@ impl ScanCode {
         match *self {
 ".as_bytes()));
     for &entry in entries.iter() {
-        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).as_bytes()));
+        try!(out.write(format!("            {} => {},\n", entry.padded_ident(), entry.code).container_as_bytes()));
     }
 
     try!(out.write("
@@ -355,7 +357,7 @@ impl ToPrimitive for ScanCode {
     for primitive_type in types.iter() {
         try!(out.write(format!("fn to_{}(&self) -> Option<{}> \\{
             Some(self.code() as {})
-        \\}\n", *primitive_type, *primitive_type, *primitive_type).as_bytes()));
+        \\}\n", *primitive_type, *primitive_type, *primitive_type).container_as_bytes()));
     }
 
 try!(out.write("
@@ -374,10 +376,10 @@ impl FromPrimitive for ScanCode {
         try!(out.write(format!("
     fn from_{}(n: {}) -> Option<ScanCode> \\{
         match n \\{
-", *primitive_type, *primitive_type).as_bytes()));
+", *primitive_type, *primitive_type).container_as_bytes()));
 
         for &entry in entries.iter() {
-            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).as_bytes()));
+            try!(out.write(format!("            {} => Some({}),\n", entry.code, entry.ident()).container_as_bytes()));
         }
 
         try!(out.write("

@@ -86,8 +86,8 @@ bitflags!(flags SurfaceFlag: u32 {
 #[deriving(Eq)]
 #[allow(raw_pointer_deriving)]
 pub struct Surface {
-    pub raw: *ll::SDL_Surface,
-    pub owned: bool
+    raw: *ll::SDL_Surface,
+    owned: bool
 }
 
 impl Drop for Surface {
@@ -99,6 +99,10 @@ impl Drop for Surface {
         }
     }
 }
+
+impl_raw_accessors!(Surface, *ll::SDL_Surface)
+impl_owned_accessors!(Surface, owned)
+impl_raw_constructor!(Surface -> Surface (raw: *ll::SDL_Surface, owned: bool))
 
 impl Surface {
     pub fn new(surface_flags: SurfaceFlag, width: int, height: int, bpp: int,
@@ -138,8 +142,8 @@ impl Surface {
     }
 
     pub fn get_pixel_format(&self) -> pixels::PixelFormat {
-        pixels::PixelFormat {
-            raw: unsafe { (*self.raw).format }
+        unsafe {
+            pixels::PixelFormat::from_ll((*self.raw).format)
         }
     }
 
@@ -165,7 +169,7 @@ impl Surface {
 
     pub fn from_bmp(path: &Path) -> SdlResult<Surface> {
         let raw = unsafe {
-            ll::SDL_LoadBMP_RW(try!(rwops::RWops::from_file(path, "rb")).raw, 0)
+            ll::SDL_LoadBMP_RW(try!(rwops::RWops::from_file(path, "rb")).raw(), 0)
         };
 
         if raw.is_null() { Err(get_error()) }
@@ -174,7 +178,7 @@ impl Surface {
 
     pub fn save_bmp(&self, path: &Path) -> SdlResult<()> {
 	let ret = unsafe {
-            ll::SDL_SaveBMP_RW(self.raw, try!(rwops::RWops::from_file(path, "rb")).raw, 0)
+            ll::SDL_SaveBMP_RW(self.raw, try!(rwops::RWops::from_file(path, "rb")).raw(), 0)
 	};
         if ret == 0 { Ok(()) }
         else { Err(get_error()) }
@@ -182,16 +186,18 @@ impl Surface {
 
     pub fn set_palette(&self, palette: &pixels::Palette) -> bool {
         unsafe {
-            ll::SDL_SetSurfacePalette(self.raw, palette.raw) == 0
+            ll::SDL_SetSurfacePalette(self.raw, palette.raw()) == 0
         }
     }
 
+    #[allow(non_snake_case_functions)]
     pub fn enable_RLE(&self) -> bool {
         unsafe {
             ll::SDL_SetSurfaceRLE(self.raw, 1) == 0
         }
     }
 
+    #[allow(non_snake_case_functions)]
     pub fn disable_RLE(&self) -> bool {
         unsafe {
             ll::SDL_SetSurfaceRLE(self.raw, 0) == 0

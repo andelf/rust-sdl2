@@ -1,6 +1,6 @@
 use std::ptr;
 use std::mem;
-use std::str;
+use std::c_str::CString;
 use std::c_vec::CVec;
 use libc;
 use libc::{c_int, size_t, c_void};
@@ -8,8 +8,8 @@ use libc::{uint8_t, uint16_t, uint32_t};
 use std::raw::Slice;
 
 use get_error;
-use SdlResult;
 use rwops::RWops;
+use SdlResult;
 
 
 #[allow(non_camel_case_types)]
@@ -153,10 +153,10 @@ pub fn get_num_audio_drivers() -> int {
     unsafe { ll::SDL_GetNumAudioDrivers() as int }
 }
 
-pub fn get_audio_driver(index: int) -> StrBuf {
+pub fn get_audio_driver(index: int) -> String {
     unsafe {
         let buf = ll::SDL_GetAudioDriver(index as c_int);
-        str::raw::from_c_str(buf)
+        CString::new(buf, false).as_str().unwrap().into_string()
     }
 }
 
@@ -164,10 +164,10 @@ pub fn get_num_audio_devices(iscapture: int) -> int {
     unsafe { ll::SDL_GetNumAudioDevices(iscapture as c_int) as int }
 }
 
-pub fn get_audio_device_name(index: int, iscapture: int) -> StrBuf {
+pub fn get_audio_device_name(index: int, iscapture: int) -> String {
     unsafe {
         let buf = ll::SDL_GetAudioDeviceName(index as c_int, iscapture as c_int);
-        str::raw::from_c_str(buf)
+        CString::new(buf, false).as_str().unwrap().into_string()
     }
 }
 
@@ -186,15 +186,13 @@ pub fn audio_quit() {
     unsafe { ll::SDL_AudioQuit() }
 }
 
-pub fn get_current_audio_driver() -> StrBuf {
+pub fn get_current_audio_driver() -> String {
     unsafe {
         let buf = ll::SDL_GetCurrentAudioDriver();
-        str::raw::from_c_str(buf)
+        CString::new(buf, false).as_str().unwrap().into_string()
     }
 }
 
-// make this same layout as in C
-#[repr(C)]
 pub struct AudioSpec<'a > {
     pub freq: c_int,
     pub format: AudioFormat,
@@ -228,11 +226,11 @@ impl<'a> AudioSpec<'a> {
 
     pub fn load_wav_rw(src: &RWops) -> SdlResult<(AudioSpec, CVec<u8>)> {
         assert_eq!(mem::size_of::<AudioSpec>(), mem::size_of::<ll::SDL_AudioSpec>());
-        let mut spec = unsafe { mem::uninit::<AudioSpec>() };
+        let mut spec = unsafe { mem::uninitialized::<AudioSpec>() };
         let audio_buf = ptr::null::<u8>();
         let audio_len = 0u32;
         unsafe {
-            let ret = ll::SDL_LoadWAV_RW(src.raw, 0, mem::transmute(&spec), &audio_buf, &audio_len);
+            let ret = ll::SDL_LoadWAV_RW(src.raw(), 0, mem::transmute(&spec), &audio_buf, &audio_len);
             if ret.is_null() {
                 Err(get_error())
             } else {
@@ -264,7 +262,7 @@ impl AudioDevice {
 
     pub fn open(device: Option<&str>, iscapture: int, spec: &AudioSpec) -> SdlResult<(AudioDevice, AudioSpec)> {
         //! SDL_OpenAudioDevice
-        let obtained = unsafe { mem::uninit::<AudioSpec>() };
+        let obtained = unsafe { mem::uninitialized::<AudioSpec>() };
         unsafe {
             let device_c_str = match device {
                 None => ptr::null(),
@@ -318,9 +316,12 @@ impl AudioDevice {
 
 #[deriving(Eq)] #[allow(raw_pointer_deriving)]
 pub struct AudioCVT {
-    pub raw: *mut ll::SDL_AudioCVT,
-    pub owned: bool,
+    raw: *mut ll::SDL_AudioCVT,
+    owned: bool,
 }
+
+impl_raw_accessors!(AudioCVT, *mut ll::SDL_AudioCVT)
+impl_owned_accessors!(AudioCVT, owned)
 
 impl Drop for AudioCVT {
     fn drop(&mut self) {
@@ -351,7 +352,7 @@ impl AudioCVT {
 
         unsafe {
             if (*self.raw).needed != 1 {
-                return Err("no convertion needed!".to_owned())
+                return Err("no convertion needed!".into_string())
             }
             // set len
             (*self.raw).len = src.len() as c_int;

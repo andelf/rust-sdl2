@@ -7,10 +7,10 @@ use std::vec::Vec;
 use rect::Rect;
 use surface::Surface;
 use pixels;
+use SdlResult;
 use std::num::FromPrimitive;
 
 use get_error;
-use SdlResult;
 
 #[allow(non_camel_case_types)]
 pub mod ll {
@@ -298,8 +298,8 @@ fn unwrap_windowpos (pos: WindowPos) -> ll::SDL_WindowPos {
 
 #[deriving(Eq)]
 pub struct GLContext {
-    pub raw: ll::SDL_GLContext,
-    pub owned: bool
+    raw: ll::SDL_GLContext,
+    owned: bool
 }
 
 impl Drop for GLContext {
@@ -312,13 +312,26 @@ impl Drop for GLContext {
     }
 }
 
-
 #[deriving(Eq)]
 #[allow(raw_pointer_deriving)]
 pub struct Window {
-    pub raw: *ll::SDL_Window,
-    pub owned: bool
+    raw: *ll::SDL_Window,
+    owned: bool
 }
+
+impl_raw_accessors!(
+    GLContext, ll::SDL_GLContext;
+    Window, *ll::SDL_Window
+)
+
+impl_owned_accessors!(
+    GLContext, owned;
+    Window, owned
+)
+
+impl_raw_constructor!(
+    Window -> Window (raw: *ll::SDL_Window, owned: bool)
+)
 
 impl Drop for Window {
     fn drop(&mut self) {
@@ -420,7 +433,7 @@ impl Window {
         })
     }
 
-    pub fn get_title(&self) -> StrBuf {
+    pub fn get_title(&self) -> String {
         unsafe {
             let cstr = ll::SDL_GetWindowTitle(self.raw);
             str::raw::from_c_str(mem::transmute_copy(&cstr))
@@ -428,7 +441,7 @@ impl Window {
     }
 
     pub fn set_icon(&self, icon: &Surface) {
-        unsafe { ll::SDL_SetWindowIcon(self.raw, icon.raw) }
+        unsafe { ll::SDL_SetWindowIcon(self.raw, icon.raw()) }
     }
 
     //pub fn SDL_SetWindowData(window: *SDL_Window, name: *c_char, userdata: *c_void) -> *c_void; //TODO: Figure out what this does
@@ -516,7 +529,7 @@ impl Window {
         if raw == ptr::null() {
             Err(get_error())
         } else {
-            Ok(Surface {raw: raw, owned: false}) //Docs say that it releases with the window
+            unsafe { Ok(Surface::from_ll(raw, false)) } //Docs say that it releases with the window
         }
     }
 
@@ -601,7 +614,7 @@ pub fn get_num_video_drivers() -> SdlResult<int> {
     }
 }
 
-pub fn get_video_driver(id: int) -> StrBuf {
+pub fn get_video_driver(id: int) -> String {
     unsafe {
         let cstr = ll::SDL_GetVideoDriver(id as c_int);
         str::raw::from_c_str(mem::transmute_copy(&cstr))
@@ -618,7 +631,7 @@ pub fn video_quit() {
     unsafe { ll::SDL_VideoQuit() }
 }
 
-pub fn get_current_video_driver() -> StrBuf {
+pub fn get_current_video_driver() -> String {
     unsafe {
         let cstr = ll::SDL_GetCurrentVideoDriver();
         str::raw::from_c_str(mem::transmute_copy(&cstr))
@@ -634,7 +647,7 @@ pub fn get_num_video_displays() -> SdlResult<int> {
     }
 }
 
-pub fn get_display_name(display_index: int) -> StrBuf {
+pub fn get_display_name(display_index: int) -> String {
     unsafe {
         let cstr = ll::SDL_GetDisplayName(display_index as c_int);
         str::raw::from_c_str(mem::transmute_copy(&cstr))
