@@ -6,6 +6,7 @@
 
 #![feature(globs)]
 #![feature(macro_rules)]
+#![feature(unsafe_destructor)]
 
 extern crate libc;
 extern crate collections;
@@ -17,8 +18,11 @@ pub mod keycode;
 #[path = "generated/scancode.rs"]
 pub mod scancode;
 
+pub mod clipboard;
+pub mod cpuinfo;
 pub mod macros;
 pub mod event;
+pub mod filesystem;
 pub mod gesture;
 pub mod touch;
 pub mod joystick;
