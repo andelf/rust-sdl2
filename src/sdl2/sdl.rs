@@ -12,9 +12,7 @@ mod mac {
     extern {}
 }
 
-#[cfg(target_os="win32")]
-#[cfg(target_os="linux")]
-#[cfg(target_os="freebsd")]
+#[cfg(any(target_os="windows", target_os="linux", target_os="freebsd"))]
 mod others {
     #[link(name="SDL2")]
     extern {}
@@ -25,23 +23,23 @@ pub mod ll {
     use libc::{c_int, c_uint, c_char, uint32_t};
 
     pub type SDL_errorcode = c_uint;
-    pub static SDL_ENOMEM: SDL_errorcode = 0;
-    pub static SDL_EFREAD: SDL_errorcode = 1;
-    pub static SDL_EFWRITE: SDL_errorcode = 2;
-    pub static SDL_EFSEEK: SDL_errorcode = 3;
-    pub static SDL_UNSUPPORTED: SDL_errorcode = 4;
-    pub static SDL_LASTERROR: SDL_errorcode = 5;
+    pub const SDL_ENOMEM: SDL_errorcode = 0;
+    pub const SDL_EFREAD: SDL_errorcode = 1;
+    pub const SDL_EFWRITE: SDL_errorcode = 2;
+    pub const SDL_EFSEEK: SDL_errorcode = 3;
+    pub const SDL_UNSUPPORTED: SDL_errorcode = 4;
+    pub const SDL_LASTERROR: SDL_errorcode = 5;
 
     pub type SDL_InitFlag = uint32_t;
-    pub static SDL_INIT_TIMER: SDL_InitFlag = 0x00000001;
-    pub static SDL_INIT_AUDIO: SDL_InitFlag = 0x00000010;
-    pub static SDL_INIT_VIDEO: SDL_InitFlag = 0x00000020;
-    pub static SDL_INIT_JOYSTICK: SDL_InitFlag = 0x00000200;
-    pub static SDL_INIT_HAPTIC: SDL_InitFlag = 0x00001000;
-    pub static SDL_INIT_GAMECONTROLLER: SDL_InitFlag = 0x00002000;
-    pub static SDL_INIT_EVENTS: SDL_InitFlag = 0x00004000;
-    pub static SDL_INIT_NOPARACHUTE: SDL_InitFlag = 0x00100000;
-    pub static SDL_INIT_EVERYTHING: SDL_InitFlag = 0x0000FFFF;
+    pub const SDL_INIT_TIMER: SDL_InitFlag = 0x00000001;
+    pub const SDL_INIT_AUDIO: SDL_InitFlag = 0x00000010;
+    pub const SDL_INIT_VIDEO: SDL_InitFlag = 0x00000020;
+    pub const SDL_INIT_JOYSTICK: SDL_InitFlag = 0x00000200;
+    pub const SDL_INIT_HAPTIC: SDL_InitFlag = 0x00001000;
+    pub const SDL_INIT_GAMECONTROLLER: SDL_InitFlag = 0x00002000;
+    pub const SDL_INIT_EVENTS: SDL_InitFlag = 0x00004000;
+    pub const SDL_INIT_NOPARACHUTE: SDL_InitFlag = 0x00100000;
+    pub const SDL_INIT_EVERYTHING: SDL_InitFlag = 0x0000FFFF;
 
     //SDL_error.h
     extern "C" {
@@ -62,17 +60,19 @@ pub mod ll {
     }
 }
 
-bitflags!(flags InitFlag: u32 {
-    static InitTimer = ll::SDL_INIT_TIMER,
-    static InitAudio = ll::SDL_INIT_AUDIO,
-    static InitVideo = ll::SDL_INIT_VIDEO,
-    static InitJoystick = ll::SDL_INIT_JOYSTICK,
-    static InitHaptic = ll::SDL_INIT_HAPTIC,
-    static InitGameController = ll::SDL_INIT_GAMECONTROLLER,
-    static InitEvents = ll::SDL_INIT_EVENTS,
-    static InitNoParachute = ll::SDL_INIT_NOPARACHUTE,
-    static InitEverything = ll::SDL_INIT_EVERYTHING
-})
+bitflags! {
+    flags InitFlag: u32 {
+        const INIT_TIMER = ll::SDL_INIT_TIMER,
+        const INIT_AUDIO = ll::SDL_INIT_AUDIO,
+        const INIT_VIDEO = ll::SDL_INIT_VIDEO,
+        const INIT_JOYSTICK = ll::SDL_INIT_JOYSTICK,
+        const INIT_HAPTIC = ll::SDL_INIT_HAPTIC,
+        const INIT_GAME_CONTROLLER = ll::SDL_INIT_GAMECONTROLLER,
+        const INIT_EVENTS = ll::SDL_INIT_EVENTS,
+        const INIT_NOPARACHUTE = ll::SDL_INIT_NOPARACHUTE,
+        const INIT_EVERYTHING = ll::SDL_INIT_EVERYTHING
+    }
+}
 
 #[deriving(PartialEq)]
 pub enum Error {
@@ -133,6 +133,6 @@ pub fn clear_error() {
     unsafe { ll::SDL_ClearError(); }
 }
 
-pub fn get_ticks() -> uint {
-    unsafe { ll::SDL_GetTicks() as uint }
+pub fn get_ticks() -> u32 {
+    unsafe { ll::SDL_GetTicks() as u32 }
 }

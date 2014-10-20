@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::num::FromPrimitive;
 use std::ptr;
-use std::str;
+use std::string;
 use std::vec;
 
-use keycode::KeyCode;
+use keycode::{KeyCode, UnknownKey};
 use rect::Rect;
-use scancode::ScanCode;
+use scancode::{ScanCode, UnknownScanCode};
 use video::Window;
 
 #[allow(non_camel_case_types)]
@@ -50,21 +50,23 @@ pub mod ll {
     }
 }
 
-bitflags!(flags Mod: u32 {
-     static NoMod = 0x0000,
-     static LShiftMod = 0x0001,
-     static RShiftMod = 0x0002,
-     static LCtrlMod = 0x0040,
-     static RCtrlMod = 0x0080,
-     static LAltMod = 0x0100,
-     static RAltMod = 0x0200,
-     static LGuiMod = 0x0400,
-     static RGuiMod = 0x0800,
-     static NumMod = 0x1000,
-     static CapsMod = 0x2000,
-     static ModeMod = 0x4000,
-     static ReservedMod = 0x8000
-})
+bitflags! {
+    flags Mod: u32 {
+        const NOMOD = 0x0000,
+        const LSHIFTMOD = 0x0001,
+        const RSHIFTMOD = 0x0002,
+        const LCTRLMOD = 0x0040,
+        const RCTRLMOD = 0x0080,
+        const LALTMOD = 0x0100,
+        const RALTMOD = 0x0200,
+        const LGUIMOD = 0x0400,
+        const RGUIMOD = 0x0800,
+        const NUMMOD = 0x1000,
+        const CAPSMOD = 0x2000,
+        const MODEMOD = 0x4000,
+        const RESERVEDMOD = 0x8000
+    }
+}
 
 pub fn get_keyboard_focus() -> Option<Window> {
     let raw = unsafe { ll::SDL_GetKeyboardFocus() };
@@ -84,8 +86,9 @@ pub fn get_keyboard_state() -> HashMap<ScanCode, bool> {
 
     let mut current = 0;
     while current < raw.len() {
-        state.insert(FromPrimitive::from_int(current as int).unwrap(),
-                     *raw.get(current) == 1);
+        state.insert(FromPrimitive::from_int(current as int)
+                        .unwrap_or(UnknownScanCode),
+                     raw[current] == 1);
         current += 1;
     }
 
@@ -102,42 +105,46 @@ pub fn set_mod_state(flags: Mod) {
 
 pub fn get_key_from_scancode(scancode: ScanCode) -> KeyCode {
     unsafe {
-        FromPrimitive::from_int(ll::SDL_GetKeyFromScancode(scancode.code()
-                                                            as u32) as int).unwrap()
+        FromPrimitive::from_int(ll::SDL_GetKeyFromScancode(scancode as u32) as int)
+            .unwrap_or(UnknownKey)
     }
 }
 
 pub fn get_scancode_from_key(key: KeyCode) -> ScanCode {
     unsafe {
-        FromPrimitive::from_int(ll::SDL_GetScancodeFromKey(key.code())
-                                 as int).unwrap()
+        FromPrimitive::from_int(ll::SDL_GetScancodeFromKey(key as i32) as int)
+            .unwrap_or(UnknownScanCode)
     }
 }
 
 pub fn get_scancode_name(scancode: ScanCode) -> String {
     unsafe {
-        str::raw::from_c_str(ll::SDL_GetScancodeName(scancode.code() as u32))
+        let scancode_name = ll::SDL_GetScancodeName(scancode as u32);
+        string::raw::from_buf(scancode_name as *const u8)
     }
 }
 
 pub fn get_scancode_from_name(name: &str) -> ScanCode {
     unsafe {
         name.with_c_str(|name| {
-            FromPrimitive::from_int(ll::SDL_GetScancodeFromName(name) as int).unwrap()
+            FromPrimitive::from_int(ll::SDL_GetScancodeFromName(name) as int)
+                .unwrap_or(UnknownScanCode)
         })
     }
 }
 
 pub fn get_key_name(key: KeyCode) -> String {
     unsafe {
-        str::raw::from_c_str(ll::SDL_GetKeyName(key.code()))
+        let key_name = ll::SDL_GetKeyName(key as i32);
+        string::raw::from_buf(key_name as *const u8)
     }
 }
 
 pub fn get_key_from_name(name: &str) -> KeyCode {
     unsafe {
         name.with_c_str(|name| {
-            FromPrimitive::from_int(ll::SDL_GetKeyFromName(name) as int).unwrap()
+            FromPrimitive::from_int(ll::SDL_GetKeyFromName(name) as int)
+                .unwrap_or(UnknownKey)
         })
     }
 }

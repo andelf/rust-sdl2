@@ -5,7 +5,7 @@ Event Handling
 use std::mem;
 use libc::{c_int, c_void, uint32_t};
 use std::num::FromPrimitive;
-use std::str;
+use std::string;
 use std::ptr;
 
 use controller;
@@ -15,18 +15,17 @@ use joystick::HatState;
 use keyboard;
 use keyboard::Mod;
 use keyboard::ll::SDL_Keymod;
-use keycode::KeyCode;
+use keycode::{KeyCode, UnknownKey};
 use mouse;
 use mouse::{Mouse, MouseState};
-use scancode::ScanCode;
+use scancode::{ScanCode, UnknownScanCode};
 use video;
 use get_error;
 use SdlResult;
 
 #[doc(hidden)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, non_snake_case)]
 pub mod ll {
-    use std::mem;
     use libc::{c_float, c_int, c_char, c_uint, c_void, int16_t,
                int32_t, uint8_t, uint16_t, uint32_t};
     use gesture::ll::SDL_GestureID;
@@ -38,60 +37,62 @@ pub mod ll {
 
     // SDL_events.h
     pub type SDL_EventState = uint8_t;
-    pub static SDL_DISABLE: SDL_EventState = 0;
-    pub static SDL_ENABLE: SDL_EventState = 1;
-    pub static SDL_QUERY: SDL_EventState = -1;
+    pub const SDL_DISABLE: SDL_EventState = 0;
+    pub const SDL_ENABLE: SDL_EventState = 1;
+    pub const SDL_QUERY: SDL_EventState = -1;
 
     pub type SDL_SysWMmsg = c_void;
 
     pub type SDL_EventType = c_uint;
-    pub static SDL_FIRSTEVENT: SDL_EventType = 0;
-    pub static SDL_QUIT: SDL_EventType = 256;
-    pub static SDL_APP_TERMINATING: SDL_EventType = 257;
-    pub static SDL_APP_LOWMEMORY: SDL_EventType = 258;
-    pub static SDL_APP_WILLENTERBACKGROUND: SDL_EventType = 259;
-    pub static SDL_APP_DIDENTERBACKGROUND: SDL_EventType = 260;
-    pub static SDL_APP_WILLENTERFOREGROUND: SDL_EventType = 261;
-    pub static SDL_APP_DIDENTERFOREGROUND: SDL_EventType = 262;
-    pub static SDL_WINDOWEVENT: SDL_EventType = 512;
-    pub static SDL_SYSWMEVENT: SDL_EventType = 513;
-    pub static SDL_KEYDOWN: SDL_EventType = 768;
-    pub static SDL_KEYUP: SDL_EventType = 769;
-    pub static SDL_TEXTEDITING: SDL_EventType = 770;
-    pub static SDL_TEXTINPUT: SDL_EventType = 771;
-    pub static SDL_MOUSEMOTION: SDL_EventType = 1024;
-    pub static SDL_MOUSEBUTTONDOWN: SDL_EventType = 1025;
-    pub static SDL_MOUSEBUTTONUP: SDL_EventType = 1026;
-    pub static SDL_MOUSEWHEEL: SDL_EventType = 1027;
-    pub static SDL_JOYAXISMOTION: SDL_EventType = 1536;
-    pub static SDL_JOYBALLMOTION: SDL_EventType = 1537;
-    pub static SDL_JOYHATMOTION: SDL_EventType = 1538;
-    pub static SDL_JOYBUTTONDOWN: SDL_EventType = 1539;
-    pub static SDL_JOYBUTTONUP: SDL_EventType = 1540;
-    pub static SDL_JOYDEVICEADDED: SDL_EventType = 1541;
-    pub static SDL_JOYDEVICEREMOVED: SDL_EventType = 1542;
-    pub static SDL_CONTROLLERAXISMOTION: SDL_EventType = 1616;
-    pub static SDL_CONTROLLERBUTTONDOWN: SDL_EventType = 1617;
-    pub static SDL_CONTROLLERBUTTONUP: SDL_EventType = 1618;
-    pub static SDL_CONTROLLERDEVICEADDED: SDL_EventType = 1619;
-    pub static SDL_CONTROLLERDEVICEREMOVED: SDL_EventType = 1620;
-    pub static SDL_CONTROLLERDEVICEREMAPPED: SDL_EventType = 1621;
-    pub static SDL_FINGERDOWN: SDL_EventType = 1792;
-    pub static SDL_FINGERUP: SDL_EventType = 1793;
-    pub static SDL_FINGERMOTION: SDL_EventType = 1794;
-    pub static SDL_DOLLARGESTURE: SDL_EventType = 2048;
-    pub static SDL_DOLLARRECORD: SDL_EventType = 2049;
-    pub static SDL_MULTIGESTURE: SDL_EventType = 2050;
-    pub static SDL_CLIPBOARDUPDATE: SDL_EventType = 2304;
-    pub static SDL_DROPFILE: SDL_EventType = 4096;
-    pub static SDL_USEREVENT: SDL_EventType = 32768;
-    pub static SDL_LASTEVENT: SDL_EventType = 65535;
+    pub const SDL_FIRSTEVENT: SDL_EventType = 0;
+    pub const SDL_QUIT: SDL_EventType = 256;
+    pub const SDL_APP_TERMINATING: SDL_EventType = 257;
+    pub const SDL_APP_LOWMEMORY: SDL_EventType = 258;
+    pub const SDL_APP_WILLENTERBACKGROUND: SDL_EventType = 259;
+    pub const SDL_APP_DIDENTERBACKGROUND: SDL_EventType = 260;
+    pub const SDL_APP_WILLENTERFOREGROUND: SDL_EventType = 261;
+    pub const SDL_APP_DIDENTERFOREGROUND: SDL_EventType = 262;
+    pub const SDL_WINDOWEVENT: SDL_EventType = 512;
+    pub const SDL_SYSWMEVENT: SDL_EventType = 513;
+    pub const SDL_KEYDOWN: SDL_EventType = 768;
+    pub const SDL_KEYUP: SDL_EventType = 769;
+    pub const SDL_TEXTEDITING: SDL_EventType = 770;
+    pub const SDL_TEXTINPUT: SDL_EventType = 771;
+    pub const SDL_MOUSEMOTION: SDL_EventType = 1024;
+    pub const SDL_MOUSEBUTTONDOWN: SDL_EventType = 1025;
+    pub const SDL_MOUSEBUTTONUP: SDL_EventType = 1026;
+    pub const SDL_MOUSEWHEEL: SDL_EventType = 1027;
+    pub const SDL_JOYAXISMOTION: SDL_EventType = 1536;
+    pub const SDL_JOYBALLMOTION: SDL_EventType = 1537;
+    pub const SDL_JOYHATMOTION: SDL_EventType = 1538;
+    pub const SDL_JOYBUTTONDOWN: SDL_EventType = 1539;
+    pub const SDL_JOYBUTTONUP: SDL_EventType = 1540;
+    pub const SDL_JOYDEVICEADDED: SDL_EventType = 1541;
+    pub const SDL_JOYDEVICEREMOVED: SDL_EventType = 1542;
+    pub const SDL_CONTROLLERAXISMOTION: SDL_EventType = 1616;
+    pub const SDL_CONTROLLERBUTTONDOWN: SDL_EventType = 1617;
+    pub const SDL_CONTROLLERBUTTONUP: SDL_EventType = 1618;
+    pub const SDL_CONTROLLERDEVICEADDED: SDL_EventType = 1619;
+    pub const SDL_CONTROLLERDEVICEREMOVED: SDL_EventType = 1620;
+    pub const SDL_CONTROLLERDEVICEREMAPPED: SDL_EventType = 1621;
+    pub const SDL_FINGERDOWN: SDL_EventType = 1792;
+    pub const SDL_FINGERUP: SDL_EventType = 1793;
+    pub const SDL_FINGERMOTION: SDL_EventType = 1794;
+    pub const SDL_DOLLARGESTURE: SDL_EventType = 2048;
+    pub const SDL_DOLLARRECORD: SDL_EventType = 2049;
+    pub const SDL_MULTIGESTURE: SDL_EventType = 2050;
+    pub const SDL_CLIPBOARDUPDATE: SDL_EventType = 2304;
+    pub const SDL_DROPFILE: SDL_EventType = 4096;
+    pub const SDL_USEREVENT: SDL_EventType = 32768;
+    pub const SDL_LASTEVENT: SDL_EventType = 65535;
 
+    #[repr(C)]
     pub struct SDL_CommonEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_WindowEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -104,6 +105,7 @@ pub mod ll {
         pub data2: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_KeyboardEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -115,6 +117,7 @@ pub mod ll {
         pub keysym: SDL_Keysym,
     }
 
+    #[repr(C)]
     pub struct SDL_TextEditingEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -124,6 +127,7 @@ pub mod ll {
         pub length: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_TextInputEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -131,6 +135,7 @@ pub mod ll {
         pub text: [c_char, ..32u],
     }
 
+    #[repr(C)]
     pub struct SDL_MouseMotionEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -143,6 +148,7 @@ pub mod ll {
         pub yrel: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_MouseButtonEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -156,6 +162,7 @@ pub mod ll {
         pub y: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_MouseWheelEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -165,6 +172,7 @@ pub mod ll {
         pub y: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_JoyAxisEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -177,6 +185,7 @@ pub mod ll {
         pub padding4: uint16_t,
     }
 
+    #[repr(C)]
     pub struct SDL_JoyBallEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -189,6 +198,7 @@ pub mod ll {
         pub yrel: int16_t,
     }
 
+    #[repr(C)]
     pub struct SDL_JoyHatEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -199,6 +209,7 @@ pub mod ll {
         pub padding2: uint8_t,
     }
 
+    #[repr(C)]
     pub struct SDL_JoyButtonEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -209,12 +220,14 @@ pub mod ll {
         pub padding2: uint8_t,
     }
 
+    #[repr(C)]
     pub struct SDL_JoyDeviceEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
         pub which: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_ControllerAxisEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -227,6 +240,7 @@ pub mod ll {
         pub padding4: uint16_t,
     }
 
+    #[repr(C)]
     pub struct SDL_ControllerButtonEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -237,12 +251,14 @@ pub mod ll {
         pub padding2: uint8_t,
     }
 
+    #[repr(C)]
     pub struct SDL_ControllerDeviceEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
         pub which: int32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_TouchFingerEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -255,6 +271,7 @@ pub mod ll {
         pub pressure: c_float,
     }
 
+    #[repr(C)]
     pub struct SDL_MultiGestureEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -267,6 +284,7 @@ pub mod ll {
         pub padding: uint16_t,
     }
 
+    #[repr(C)]
     pub struct SDL_DollarGestureEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -278,22 +296,26 @@ pub mod ll {
         pub y: c_float,
     }
 
+    #[repr(C)]
     pub struct SDL_DropEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
         pub file: *const c_char,
     }
 
+    #[repr(C)]
     pub struct SDL_QuitEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_OSEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
     }
 
+    #[repr(C)]
     pub struct SDL_UserEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
@@ -303,118 +325,120 @@ pub mod ll {
         pub data2: *const c_void,
     }
 
+    #[repr(C)]
     pub struct SDL_SysWMEvent {
         pub _type: uint32_t,
         pub timestamp: uint32_t,
         pub msg: *const SDL_SysWMmsg,
     }
 
+    #[repr(C)]
     pub struct SDL_Event {
         pub data: [uint8_t, ..56u],
     }
 
     impl SDL_Event {
         pub fn _type(&self) -> *const uint32_t {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn common(&self) -> *const SDL_CommonEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn window(&self) -> *const SDL_WindowEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn key(&self) -> *const SDL_KeyboardEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn edit(&self) -> *const SDL_TextEditingEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn text(&self) -> *const SDL_TextInputEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn motion(&self) -> *const SDL_MouseMotionEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn button(&self) -> *const SDL_MouseButtonEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn wheel(&self) -> *const SDL_MouseWheelEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn jaxis(&self) -> *const SDL_JoyAxisEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn jball(&self) -> *const SDL_JoyBallEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn jhat(&self) -> *const SDL_JoyHatEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn jbutton(&self) -> *const SDL_JoyButtonEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn jdevice(&self) -> *const SDL_JoyDeviceEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn caxis(&self) -> *const SDL_ControllerAxisEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn cbutton(&self) -> *const SDL_ControllerButtonEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn cdevice(&self) -> *const SDL_ControllerDeviceEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn quit(&self) -> *const SDL_QuitEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn user(&self) -> *const SDL_UserEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn syswm(&self) -> *const SDL_SysWMEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn tfinger(&self) -> *const SDL_TouchFingerEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn mgesture(&self) -> *const SDL_MultiGestureEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn dgesture(&self) -> *const SDL_DollarGestureEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
 
         pub fn drop(&self) -> *const SDL_DropEvent {
-            unsafe { mem::transmute_copy(&self) }
+            self.data.as_ptr() as *const _
         }
     }
 
     pub type SDL_eventaction = c_uint;
-    pub static SDL_ADDEVENT: SDL_eventaction = 0;
-    pub static SDL_PEEKEVENT: SDL_eventaction = 1;
-    pub static SDL_GETEVENT: SDL_eventaction = 2;
+    pub const SDL_ADDEVENT: SDL_eventaction = 0;
+    pub const SDL_PEEKEVENT: SDL_eventaction = 1;
+    pub const SDL_GETEVENT: SDL_eventaction = 2;
     pub type SDL_EventFilter =
         extern "C" fn(userdata: *const c_void, event: *const SDL_Event) -> c_int;
 
@@ -760,8 +784,10 @@ impl Event {
                 };
 
                 KeyDownEvent(event.timestamp as uint, window,
-                             FromPrimitive::from_int(event.keysym.sym as int).unwrap(),
-                             FromPrimitive::from_int(event.keysym.scancode as int).unwrap(),
+                             FromPrimitive::from_int(event.keysym.sym as int)
+                                .unwrap_or(UnknownKey),
+                             FromPrimitive::from_int(event.keysym.scancode as int)
+                                .unwrap_or(UnknownScanCode),
                              keyboard::Mod::from_bits(event.keysym._mod as SDL_Keymod).unwrap())
             }
             KeyUpEventType => {
@@ -774,8 +800,10 @@ impl Event {
                 };
 
                 KeyUpEvent(event.timestamp as uint, window,
-                           FromPrimitive::from_int(event.keysym.sym as int).unwrap(),
-                           FromPrimitive::from_int(event.keysym.scancode as int).unwrap(),
+                           FromPrimitive::from_int(event.keysym.sym as int)
+                                .unwrap_or(UnknownKey),
+                           FromPrimitive::from_int(event.keysym.scancode as int)
+                                .unwrap_or(UnknownScanCode),
                            keyboard::Mod::from_bits(event.keysym._mod as SDL_Keymod).unwrap())
             }
             TextEditingEventType => {
@@ -787,7 +815,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
+                let text = String::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
                 TextEditingEvent(event.timestamp as uint, window, text,
                                  event.start as int, event.length as int)
             }
@@ -800,7 +828,7 @@ impl Event {
                     Ok(window) => window,
                 };
 
-                let text = str::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
+                let text = String::from_utf8_lossy(event.text.iter().take_while(|&b| (*b) != 0i8).map(|&b| b as u8).collect::<Vec<u8>>().as_slice()).into_string();
                 TextInputEvent(event.timestamp as uint, window, text)
             }
 
@@ -848,7 +876,7 @@ impl Event {
                                    event.x as int, event.y as int)
             }
             MouseWheelEventType => {
-                let event = *raw.button();
+                let event = *raw.wheel();
 
                 let window = video::Window::from_id(event.windowID);
                 let window = match window {
@@ -991,7 +1019,7 @@ impl Event {
             DropFileEventType => {
                 let event = *raw.drop();
 
-                let text = str::raw::from_c_str(event.file);
+                let text = string::raw::from_buf(event.file as *const u8);
                 ll::SDL_free(event.file as *const c_void);
 
                 DropFileEvent(event.timestamp as uint, text)
@@ -1085,31 +1113,31 @@ pub fn wait_event_timeout(timeout: int) -> SdlResult<Event> {
 extern "C" fn event_filter_wrapper(userdata: *const c_void, event: *const ll::SDL_Event) -> c_int {
     let filter: extern fn(event: Event) -> bool = unsafe { mem::transmute(userdata) };
     if event.is_null() { 1 }
-    else { filter(Event::from_ll(unsafe { mem::transmute(event) })) as c_int }
+    else { filter(Event::from_ll(unsafe { &*event })) as c_int }
 }
 
 /// Set up a filter to process all events before they change internal state and are posted to the internal event queue.
 pub fn set_event_filter(filter_func: extern fn(event: Event) -> bool) {
     unsafe { ll::SDL_SetEventFilter(event_filter_wrapper,
-                                    mem::transmute(filter_func)) }
+                                    filter_func as *const _) }
 }
 
 /// Add a callback to be triggered when an event is added to the event queue.
 pub fn add_event_watch(filter_func: extern fn(event: Event) -> bool) {
     unsafe { ll::SDL_AddEventWatch(event_filter_wrapper,
-                                   mem::transmute(filter_func)) }
+                                   filter_func as *const _) }
 }
 
 /// Remove an event watch callback added.
 pub fn delete_event_watch(filter_func: extern fn(event: Event) -> bool) {
     unsafe { ll::SDL_DelEventWatch(event_filter_wrapper,
-                                   mem::transmute(filter_func)) }
+                                   filter_func as *const _) }
 }
 
 /// Run a specific filter function on the current event queue, removing any events for which the filter returns 0.
 pub fn filter_events(filter_func: extern fn(event: Event) -> bool) {
     unsafe { ll::SDL_FilterEvents(event_filter_wrapper,
-                                  mem::transmute(filter_func)) }
+                                  filter_func as *const _) }
 }
 
 /// Set the state of processing events.

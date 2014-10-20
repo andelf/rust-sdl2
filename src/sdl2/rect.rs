@@ -7,6 +7,7 @@ use libc::c_int;
 
 /// A structure that defines a two dimensional point.
 #[deriving(PartialEq, Clone, Show)]
+#[repr(C)]
 pub struct Point {
     pub x: i32,
     pub y: i32
@@ -14,6 +15,7 @@ pub struct Point {
 
 /// A structure that defines a rectangle, with the origin at the upper left.
 #[deriving(PartialEq, Clone, Show)]
+#[repr(C)]
 pub struct Rect {
     pub x: i32,
     pub y: i32,
@@ -67,7 +69,7 @@ impl Rect {
 
         let result = unsafe {
             ll::SDL_EnclosePoints(
-                mem::transmute(points.as_ptr()),
+                points.as_ptr(),
                 points.len() as c_int,
                 mem::transmute(clip.as_ref()),
                 &out
@@ -138,7 +140,7 @@ impl Rect {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{Rect, Point};
 
     #[test]
     fn test_from_enclose_points() {

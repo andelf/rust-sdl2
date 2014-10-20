@@ -1,21 +1,17 @@
-#![crate_id="sdl2#0.0.1"]
+#![crate_name = "sdl2"]
 #![crate_type = "lib"]
 
 #![desc = "SDL2 bindings"]
 #![license = "MIT"]
 
-#![feature(globs)]
-#![feature(macro_rules)]
-#![feature(unsafe_destructor)]
+#![feature(default_type_params, globs, macro_rules, slicing_syntax, unsafe_destructor)]
 
 extern crate libc;
 extern crate collections;
-extern crate debug;
 
 pub use sdl::*;
-#[path = "generated/keycode.rs"]
+
 pub mod keycode;
-#[path = "generated/scancode.rs"]
 pub mod scancode;
 
 pub mod clipboard;
@@ -39,3 +35,4 @@ pub mod rwops;
 pub mod sdl;
 pub mod audio;
 pub mod version;
+pub mod messagebox;
